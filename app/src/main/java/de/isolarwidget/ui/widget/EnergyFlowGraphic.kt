@@ -72,20 +72,25 @@ object EnergyFlowGraphic {
         val midX = (hx0 + hx1) / 2
         val eaveX = hx0 - 10 * d; val eaveY = wallTop + 2 * d
         fun roofPt(t: Float) = (midX + (eaveX - midX) * t) to (roofPeak + (eaveY - roofPeak) * t)
-        // Modulfeld als Streifen entlang der Dachschräge, nach innen versetzt
-        val dx = eaveX - midX; val dy = eaveY - roofPeak
-        val len = kotlin.math.sqrt(dx * dx + dy * dy)
-        val nx = dy / len; val ny = -dx / len          // Normale ins Dach hinein (nach rechts unten)
-        val off = 3 * d; val ph = 15 * d
-        val (ax, ay) = roofPt(0.22f); val (bx, by) = roofPt(0.72f)
+        // Modulfeld: Parallelogramm mit Kanten parallel zur linken Dachschräge, waagrecht oben/unten
+        val s1 = 9 * d; val s2 = s1 + (midX - hx0) * 0.55f
+        val t0 = 0.30f; val t1 = 0.86f
+        fun lp(t: Float, shift: Float) = roofPt(t).let { (x, y) -> (x + shift) to y }
         val panel = Path().apply {
-            moveTo(ax + nx * off, ay + ny * off); lineTo(bx + nx * off, by + ny * off)
-            lineTo(bx + nx * (off + ph), by + ny * (off + ph)); lineTo(ax + nx * (off + ph), ay + ny * (off + ph)); close()
+            lp(t0, s1).let { moveTo(it.first, it.second) }; lp(t1, s1).let { lineTo(it.first, it.second) }
+            lp(t1, s2).let { lineTo(it.first, it.second) }; lp(t0, s2).let { lineTo(it.first, it.second) }; close()
         }
-        val (cxr, cyr) = roofPt(0.47f)
-        val panelCenter = (cxr + nx * (off + ph / 2)) to (cyr + ny * (off + ph / 2))
+        val panelCenter = lp((t0 + t1) / 2, (s1 + s2) / 2)
         fill.color = PANEL; c.drawPath(panel, fill)
-        stroke.color = PANEL_LINE; c.drawPath(panel, stroke); stroke.color = OUTLINE
+        stroke.color = PANEL_LINE; c.drawPath(panel, stroke)
+        for (k in 1..2) {   // Modulfugen
+            val sh = s1 + (s2 - s1) * k / 3
+            val a = lp(t0, sh); val b = lp(t1, sh)
+            c.drawLine(a.first, a.second, b.first, b.second, stroke)
+        }
+        val tm = (t0 + t1) / 2
+        lp(tm, s1).let { a -> lp(tm, s2).let { b -> c.drawLine(a.first, a.second, b.first, b.second, stroke) } }
+        stroke.color = OUTLINE
 
         // Tür und Fenster
         fill.color = WALL_SHADE
