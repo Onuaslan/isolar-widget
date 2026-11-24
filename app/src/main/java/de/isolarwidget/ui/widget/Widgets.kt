@@ -86,11 +86,11 @@ abstract class CacheWidget : GlanceAppWidget() {
 
 /** „Mein Zuhause“ 2×2: Tagesertrag und Tagesverbrauch. */
 class SmallWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(110.dp, 70.dp), DpSize(110.dp, COMPACT_BELOW))
+    override val breakpoints = setOf(DpSize(110.dp, 60.dp), DpSize(110.dp, SMALL_FULL))
 
     @Composable
     override fun Content(s: PvSnapshot) {
-        val c = isCompact()
+        val c = LocalSize.current.height < SMALL_FULL
         Card(c) {
             Header(s, c)
             Spacer(GlanceModifier.defaultWeight())
@@ -103,11 +103,13 @@ class SmallWidget : CacheWidget() {
 
 /** „Mein Zuhause“ 4×2: je eine Mini-Kurve über Tagesertrag (orange) und Tagesverbrauch (blau). */
 class WideWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(250.dp, 70.dp), DpSize(250.dp, COMPACT_BELOW))
+    override val breakpoints = setOf(DpSize(250.dp, 60.dp), DpSize(250.dp, WIDE_NO_CURVE), DpSize(250.dp, WIDE_FULL))
 
     @Composable
     override fun Content(s: PvSnapshot) {
-        val c = isCompact()
+        val h = LocalSize.current.height
+        val c = h < WIDE_FULL
+        val showCurve = h >= WIDE_NO_CURVE
         val colW = (LocalSize.current.width - 36.dp - 20.dp) / 2
         val curveH = if (c) 18.dp else 36.dp
         val gap = if (c) 4.dp else 10.dp
@@ -118,14 +120,18 @@ class WideWidget : CacheWidget() {
             Spacer(GlanceModifier.defaultWeight())
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true)
-                    Spacer(GlanceModifier.height(gap))
+                    if (showCurve) {
+                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true)
+                        Spacer(GlanceModifier.height(gap))
+                    }
                     ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
                 }
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
-                    Spacer(GlanceModifier.height(gap))
+                    if (showCurve) {
+                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
+                        Spacer(GlanceModifier.height(gap))
+                    }
                     ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
                 }
             }
@@ -135,11 +141,15 @@ class WideWidget : CacheWidget() {
 
 // ---------------- Bausteine ----------------
 
-/** Unter dieser Höhe (z. B. Querformat) wird das Widget kompakt dargestellt. */
-private val COMPACT_BELOW = 130.dp
-
-@Composable
-private fun isCompact(): Boolean = LocalSize.current.height < COMPACT_BELOW
+/*
+ * Höhenstufen. Glance liefert in LocalSize die gewählte Stufe (nicht die echte Größe), daher
+ * entspricht jede Stufe der Mindesthöhe, die das jeweilige Layout ohne Abschneiden braucht
+ * (Polster + Kopfzeile + Stand + Kurve + Beschriftung + Wert).
+ * Darunter (z. B. im Querformat) wird kompakt dargestellt, ganz flach ohne Kurven.
+ */
+private val SMALL_FULL = 172.dp
+private val WIDE_FULL = 162.dp
+private val WIDE_NO_CURVE = 100.dp
 
 private fun PvSnapshot.todayCurve(): DayCurve =
     if (curve.date == LocalDate.now().toString()) curve else DayCurve.EMPTY
