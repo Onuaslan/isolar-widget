@@ -71,6 +71,15 @@ class CredentialStore(context: Context) {
         get() = prefs.getString(K_PLANT_NAME, null)
         set(v) = prefs.edit { if (v == null) remove(K_PLANT_NAME) else putString(K_PLANT_NAME, v) }
 
+    /** ps_key + device_type des Geräts für Netzleistung (Cache aus getDeviceListByPsId). */
+    var deviceKey: String?
+        get() = prefs.getString(K_DEVICE_KEY, null)
+        set(v) = prefs.edit { if (v == null) remove(K_DEVICE_KEY) else putString(K_DEVICE_KEY, v) }
+
+    var deviceType: Int
+        get() = prefs.getInt(K_DEVICE_TYPE, 0)
+        set(v) = prefs.edit { putInt(K_DEVICE_TYPE, v) }
+
     /** true: Netzwert der API wird negiert (falls Vorzeichen der Anlage andersherum ist). */
     var invertGridSign: Boolean
         get() = prefs.getBoolean(K_INVERT_GRID, false)
@@ -91,5 +100,7 @@ class CredentialStore(context: Context) {
         const val K_PLANT_ID = "plant_id"
         const val K_PLANT_NAME = "plant_name"
         const val K_INVERT_GRID = "invert_grid"
+        const val K_DEVICE_KEY = "device_ps_key"
+        const val K_DEVICE_TYPE = "device_type"
     }
 }

@@ -23,6 +23,26 @@ object RealtimeParser {
     /** Alle bekannten Anlagen-Messpunkte (pysolarcloud), nur für die Diagnose. */
     val DIAGNOSTIC_POINTS = listOf("83022","83024","83033","83019","83006","83020","83011","83021","83032","83007","83002","83009","83004","83012","83013","83023","83005","83025","83018","83001","83008","83010","83016","83017","83046","83052","83067","83097","83100","83102","83105","83106","83118","83124","83119","83072","83075","83252","83129","83232","83233","83234","83235","83236","83237","83238","83239","83240","83243","83241","83244","83242","83548","83549","83419","83317","83318","83319","83320","83321","83322","83324","83323","83325","83327","83326","83328","83329","83330","83331","83332","83334","83335")
 
+    /**
+     * Geräteebene (Energiespeichersystem/Hybrid-WR). Manche Anlagen liefern Netzleistung nur hier.
+     * 13149 = Netzbezug (W), 13121 = Einspeiseleistung (W), 13126/13150 = Batterie laden/entladen (W).
+     */
+    const val DEV_PURCHASED = "13149"
+    const val DEV_EXPORT = "13121"
+    val DEVICE_POINTS = listOf("13003", "13011", "13119", DEV_EXPORT, "13126", "13141", DEV_PURCHASED, "13150")
+
+    /** Netz aus Gerätedaten: Bezug − Einspeisung (+ Bezug / − Einspeisung). */
+    fun parseDeviceGrid(resultData: JsonObject): Double? {
+        val p = deviceMap(resultData) ?: return null
+        val buy = p.num("p$DEV_PURCHASED")
+        val sell = p.num("p$DEV_EXPORT")
+        if (buy == null && sell == null) return null
+        return (buy ?: 0.0) - (sell ?: 0.0)
+    }
+
+    fun deviceMap(resultData: JsonObject): JsonObject? =
+        (resultData["device_point_list"] as? JsonArray)?.firstNotNullOfOrNull { it.asPointMap() }
+
     /** Alle Punkte, die angefragt werden. */
     val ALL_POINTS: List<String> = (PV_POWER + BATTERY_SOC + GRID_POWER + DAILY_YIELD).distinct()
 
@@ -57,8 +77,8 @@ object RealtimeParser {
         return (o["device_point"] as? JsonObject) ?: o
     }
 
-    private fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
+    internal fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
-    private fun JsonObject.num(key: String): Double? =
+    internal fun JsonObject.num(key: String): Double? =
         str(key)?.trim()?.takeIf { it.isNotEmpty() && it != "--" }?.replace(',', '.')?.toDoubleOrNull()
 }

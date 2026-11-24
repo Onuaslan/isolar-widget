@@ -77,6 +77,7 @@ class PvRepository private constructor(context: Context) {
     }
 
     fun selectPlant(plant: Plant) {
+        store.deviceKey = null
         store.plantId = plant.id
         store.plantName = plant.name
     }
@@ -97,13 +98,50 @@ class PvRepository private constructor(context: Context) {
                     }
                     put("is_get_point_dict", "0")
                 }).unwrap().resultData()
-                RealtimeParser.parse(data, plantId, store.invertGridSign)
+                val values = RealtimeParser.parse(data, plantId, false)
+                val grid = values.gridPowerW ?: deviceGrid(api, bearer, plantId)
+                values.copy(gridPowerW = grid?.let { if (store.invertGridSign) -it else it })
             }
         }
         result.onSuccess { cache.saveSuccess(it) }
             .onFailure { cache.saveFailure(describe(it)) }
         return result
     }
+
+    // ---------- Geräteebene (Netzleistung) ----------
+
+    private data class Device(val psKey: String, val type: Int, val name: String)
+
+    private suspend fun devices(api: IsolarApi, bearer: String, plantId: String): List<Device> {
+        val data = api.deviceList(store.credentials.secretKey, bearer, body {
+            put("ps_id", plantId); put("page", 1); put("size", 50)
+        }).unwrap().resultData()
+        return (data["pageList"] as? JsonArray).orEmpty().mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val key = o.str("ps_key") ?: return@mapNotNull null
+            Device(key, o.str("device_type")?.toIntOrNull() ?: 0, o.str("device_name").orEmpty())
+        }
+    }
+
+    /** Bevorzugt Energiespeichersystem (14), sonst Wechselrichter (1), sonst Zähler (7). */
+    private fun pickDevice(list: List<Device>): Device? =
+        listOf(14, 1, 7).firstNotNullOfOrNull { t -> list.firstOrNull { it.type == t } }
+
+    private suspend fun deviceRealtime(api: IsolarApi, bearer: String, d: Device, points: List<String>, dict: Boolean) =
+        api.deviceRealtimeData(store.credentials.secretKey, bearer, body {
+            put("device_type", d.type)
+            putJsonArray("ps_key_list") { add(JsonPrimitive(d.psKey)) }
+            putJsonArray("point_id_list") { points.forEach { add(JsonPrimitive(it)) } }
+            if (dict) put("is_get_point_dict", "1")
+        }).unwrap().resultData()
+
+    /** Netzleistung aus Gerätedaten; null, wenn nicht verfügbar (dann zeigt das Widget "–"). */
+    private suspend fun deviceGrid(api: IsolarApi, bearer: String, plantId: String): Double? = runCatching {
+        val cachedKey = store.deviceKey
+        val device = if (cachedKey != null) Device(cachedKey, store.deviceType, "")
+        else pickDevice(devices(api, bearer, plantId))?.also { store.deviceKey = it.psKey; store.deviceType = it.type }
+        device?.let { RealtimeParser.parseDeviceGrid(deviceRealtime(api, bearer, it, RealtimeParser.DEVICE_POINTS, false)) }
+    }.onFailure { if (it is AuthException) throw it }.getOrNull()
 
     /**
      * Diagnose: fragt alle bekannten Messpunkte ab und liefert die, für die die Anlage Werte hat,
@@ -129,9 +167,21 @@ class PvRepository private constructor(context: Context) {
                         val d = dict[k.drop(1)]
                         "$k ${d?.str("point_name").orEmpty()} = $v ${d?.str("point_unit").orEmpty()}".trim()
                     }.joinToString("\n").ifEmpty { "Keine Messpunkte mit Werten" }
+                    .plus("\n\n" + diagnoseDevices(api, bearer, plantId))
             }
         }.getOrElse { describe(it) }
     }
+
+    private suspend fun diagnoseDevices(api: IsolarApi, bearer: String, plantId: String): String = runCatching {
+        val list = devices(api, bearer, plantId)
+        val header = "Geräte:\n" + list.joinToString("\n") { "typ ${it.type} ${it.name} (${it.psKey})" }
+        val d = pickDevice(list) ?: return@runCatching header
+        val data = deviceRealtime(api, bearer, d, RealtimeParser.DEVICE_POINTS, true)
+        val point = RealtimeParser.deviceMap(data)
+        val values = point?.keys?.filter { it.startsWith("p") && it.drop(1).all(Char::isDigit) }?.sorted()
+            ?.joinToString("\n") { "$it = ${point.str(it)}" }.orEmpty()
+        "$header\n\nGerät typ ${d.type}:\n$values"
+    }.getOrElse { "Geräte: ${describe(it)}" }
 
     /** Führt einen Aufruf aus; bei Auth-Fehler genau einmal Token erneuern und wiederholen. */
     private suspend fun <T> authed(block: suspend (IsolarApi, String) -> T): T {

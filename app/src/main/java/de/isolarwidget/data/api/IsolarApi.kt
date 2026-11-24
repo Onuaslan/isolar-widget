@@ -39,4 +39,18 @@ interface IsolarApi {
         @Header("Authorization") bearer: String,
         @Body body: JsonObject,
     ): Response<JsonObject>
+
+    @POST("openapi/platform/getDeviceListByPsId")
+    suspend fun deviceList(
+        @Header("x-access-key") accessKey: String,
+        @Header("Authorization") bearer: String,
+        @Body body: JsonObject,
+    ): Response<JsonObject>
+
+    @POST("openapi/platform/getDeviceRealTimeData")
+    suspend fun deviceRealtimeData(
+        @Header("x-access-key") accessKey: String,
+        @Header("Authorization") bearer: String,
+        @Body body: JsonObject,
+    ): Response<JsonObject>
 }
