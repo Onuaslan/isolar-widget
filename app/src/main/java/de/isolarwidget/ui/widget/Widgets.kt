@@ -86,42 +86,47 @@ abstract class CacheWidget : GlanceAppWidget() {
 
 /** „Mein Zuhause“ 2×2: Tagesertrag und Tagesverbrauch. */
 class SmallWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(110.dp, 110.dp))
+    override val breakpoints = setOf(DpSize(110.dp, 70.dp), DpSize(110.dp, COMPACT_BELOW))
 
     @Composable
     override fun Content(s: PvSnapshot) {
-        Card {
-            Header(s)
+        val c = isCompact()
+        Card(c) {
+            Header(s, c)
             Spacer(GlanceModifier.defaultWeight())
-            ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, 23.sp)
-            Spacer(GlanceModifier.height(10.dp))
-            ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, 23.sp)
+            ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, if (c) 18.sp else 23.sp, c)
+            Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
+            ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
         }
     }
 }
 
 /** „Mein Zuhause“ 4×2: je eine Mini-Kurve über Tagesertrag (orange) und Tagesverbrauch (blau). */
 class WideWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(250.dp, 110.dp))
+    override val breakpoints = setOf(DpSize(250.dp, 70.dp), DpSize(250.dp, COMPACT_BELOW))
 
     @Composable
     override fun Content(s: PvSnapshot) {
+        val c = isCompact()
         val colW = (LocalSize.current.width - 36.dp - 20.dp) / 2
+        val curveH = if (c) 18.dp else 36.dp
+        val gap = if (c) 4.dp else 10.dp
+        val valueSize = if (c) 18.sp else 22.sp
         val curve = s.todayCurve()
-        Card {
-            Header(s)
+        Card(c) {
+            Header(s, c)
             Spacer(GlanceModifier.defaultWeight())
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.pv, colW, 36.dp, WidgetGraphics.ORANGE, fill = true)
-                    Spacer(GlanceModifier.height(10.dp))
-                    ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, 22.sp)
+                    Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true)
+                    Spacer(GlanceModifier.height(gap))
+                    ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
                 }
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.load, colW, 36.dp, WidgetGraphics.BLUE, fill = false)
-                    Spacer(GlanceModifier.height(10.dp))
-                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, 22.sp)
+                    Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
+                    Spacer(GlanceModifier.height(gap))
+                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
                 }
             }
         }
@@ -130,14 +135,20 @@ class WideWidget : CacheWidget() {
 
 // ---------------- Bausteine ----------------
 
+/** Unter dieser Höhe (z. B. Querformat) wird das Widget kompakt dargestellt. */
+private val COMPACT_BELOW = 130.dp
+
+@Composable
+private fun isCompact(): Boolean = LocalSize.current.height < COMPACT_BELOW
+
 private fun PvSnapshot.todayCurve(): DayCurve =
     if (curve.date == LocalDate.now().toString()) curve else DayCurve.EMPTY
 
 @Composable
-private fun Card(content: @Composable ColumnScope.() -> Unit) {
+private fun Card(compact: Boolean, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = GlanceModifier.fillMaxSize().background(BG).cornerRadius(22.dp)
-            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .padding(horizontal = 18.dp, vertical = if (compact) 10.dp else 16.dp)
             .clickable(actionRunCallback<OpenIsolarAction>()),
         content = content,
     )
@@ -148,13 +159,25 @@ private fun Card(content: @Composable ColumnScope.() -> Unit) {
  * nie abgeschnitten wird. Tipp auf die Batterie startet eine Aktualisierung.
  */
 @Composable
-private fun Header(s: PvSnapshot) {
+private fun Header(s: PvSnapshot, compact: Boolean) {
     val density = LocalContext.current.resources.displayMetrics.density
+    // Uhrzeit der letzten Aktualisierung, immer sichtbar; orange, wenn veraltet
+    val outdated = s.isOutdated() && !s.syncing
+    val stand = when {
+        s.syncing -> "Aktualisiere…"
+        outdated -> "Stand ${Format.time(s.lastUpdatedEpochMs)} · nicht aktuell"
+        else -> "Stand ${Format.time(s.lastUpdatedEpochMs)}"
+    }
+    val standStyle = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp)
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             "Mein Zuhause", style = TextStyle(color = TITLE, fontSize = 13.sp), maxLines = 1,
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = if (compact) GlanceModifier else GlanceModifier.defaultWeight(),
         )
+        if (compact) {
+            // Kompakt: Stand-Zeile in die Kopfzeile, spart eine Zeile Höhe
+            Text("  $stand", style = standStyle, maxLines = 1, modifier = GlanceModifier.defaultWeight())
+        }
         Spacer(GlanceModifier.width(6.dp))
         Image(
             provider = ImageProvider(WidgetGraphics.battery(s.values?.batterySocPct, (22 * density).toInt(), (12 * density).toInt())),
@@ -162,26 +185,17 @@ private fun Header(s: PvSnapshot) {
             modifier = GlanceModifier.size(22.dp, 12.dp).clickable(actionRunCallback<RefreshAction>()),
         )
     }
-    // Uhrzeit der letzten Aktualisierung, immer sichtbar; orange, wenn veraltet
-    val outdated = s.isOutdated() && !s.syncing
-    Text(
-        when {
-            s.syncing -> "Aktualisiere…"
-            outdated -> "Stand ${Format.time(s.lastUpdatedEpochMs)} · nicht aktuell"
-            else -> "Stand ${Format.time(s.lastUpdatedEpochMs)}"
-        },
-        style = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp), maxLines = 1,
-    )
+    if (!compact) Text(stand, style = standStyle, maxLines = 1)
 }
 
 @Composable
-private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit) {
+private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit, compact: Boolean = false) {
     Column {
-        Text(label, style = TextStyle(color = LABEL, fontSize = 13.sp), maxLines = 1)
-        Spacer(GlanceModifier.height(2.dp))
+        Text(label, style = TextStyle(color = LABEL, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1)
+        if (!compact) Spacer(GlanceModifier.height(2.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(Format.number(kwh), style = TextStyle(color = VALUE, fontSize = size, fontWeight = FontWeight.Bold), maxLines = 1)
-            Text(" kWh", style = TextStyle(color = VALUE, fontSize = 13.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = 3.dp))
+            Text(" kWh", style = TextStyle(color = VALUE, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = if (compact) 2.dp else 3.dp))
         }
     }
 }
