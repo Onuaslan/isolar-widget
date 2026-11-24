@@ -38,9 +38,9 @@ class CredentialStore(context: Context) {
         )
         set(v) = prefs.edit {
             putString(K_REGION, v.region.name)
-            putString(K_APPKEY, v.appKey.trim())
-            putString(K_SECRET, v.secretKey.trim())
-            putString(K_APPID, v.appId.trim())
+            putString(K_APPKEY, clean(v.appKey))
+            putString(K_SECRET, clean(v.secretKey))
+            putString(K_APPID, clean(v.appId))
         }
 
     var tokens: Tokens?
@@ -77,6 +77,9 @@ class CredentialStore(context: Context) {
         set(v) = prefs.edit { putBoolean(K_INVERT_GRID, v) }
 
     private companion object {
+        /** Entfernt alle Leer- und unsichtbaren Zeichen, die beim Kopieren aus Portal/Chat mitkommen. */
+        fun clean(s: String) = s.filterNot { it.isWhitespace() || it.isISOControl() || it in "\u200B\u200C\u200D\uFEFF\u00A0" }
+
         const val K_REGION = "region"
         const val K_APPKEY = "appkey"
         const val K_SECRET = "secret_key"
