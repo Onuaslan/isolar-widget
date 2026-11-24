@@ -189,6 +189,13 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
             Text("  $stand", style = standStyle, maxLines = 1, modifier = GlanceModifier.defaultWeight())
         }
         Spacer(GlanceModifier.width(6.dp))
+        // Sichtbarer Aktualisieren-Knopf links neben der Batterie (grau während der Aktualisierung)
+        Image(
+            provider = ImageProvider(WidgetGraphics.refresh((16 * density).toInt(), if (s.syncing) 0xFFC8CCD0.toInt() else 0xFF8E9399.toInt())),
+            contentDescription = "Aktualisieren",
+            modifier = GlanceModifier.size(16.dp).clickable(actionRunCallback<RefreshAction>()),
+        )
+        Spacer(GlanceModifier.width(10.dp))
         Image(
             provider = ImageProvider(WidgetGraphics.battery(s.values?.batterySocPct, (22 * density).toInt(), (12 * density).toInt())),
             contentDescription = "Batterie ${Format.percent(s.values?.batterySocPct)}, tippen zum Aktualisieren",

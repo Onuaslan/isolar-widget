@@ -17,6 +17,38 @@ object WidgetGraphics {
     const val BLUE = 0xFF3D7BF7.toInt()
     private const val DASH = 0xFFD5D8DC.toInt()
 
+    /** Kreispfeil zum Aktualisieren (ca. 300° Bogen mit Pfeilspitze). */
+    fun refresh(sizePx: Int, color: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val stroke = sizePx * 0.11f
+        val r = sizePx / 2f - stroke * 1.6f
+        val cx = sizePx / 2f
+        val cy = sizePx / 2f
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color; style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
+        }
+        // Bogen von 300° gegen 0° (rechts oben offen), im Uhrzeigersinn
+        c.drawArc(RectF(cx - r, cy - r, cx + r, cy + r), -60f, 300f, false, p)
+        // Pfeilspitze am Bogenende (240°), zeigt in Laufrichtung (im Uhrzeigersinn)
+        val t = Math.toRadians(240.0)
+        val ex = cx + r * Math.cos(t).toFloat()
+        val ey = cy + r * Math.sin(t).toFloat()
+        val dx = -Math.sin(t).toFloat()   // Tangente im Uhrzeigersinn (y nach unten)
+        val dy = Math.cos(t).toFloat()
+        val nx = Math.cos(t).toFloat()    // Normale (nach außen)
+        val ny = Math.sin(t).toFloat()
+        val h = stroke * 2.2f
+        val head = Path().apply {
+            moveTo(ex + dx * h, ey + dy * h)
+            lineTo(ex + nx * h * 0.85f, ey + ny * h * 0.85f)
+            lineTo(ex - nx * h * 0.85f, ey - ny * h * 0.85f)
+            close()
+        }
+        c.drawPath(head, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color; style = Paint.Style.FILL })
+        return bmp
+    }
+
     /**
      * Glatte Kurve wie in der Vorlage. [fullDay] = x-Achse über 0–24 Uhr, sonst nur über den Bereich mit Daten.
      * Gibt bei fehlenden Daten nur die gestrichelte Grundlinie zurück.

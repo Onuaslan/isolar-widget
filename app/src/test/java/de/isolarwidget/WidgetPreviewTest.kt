@@ -30,6 +30,7 @@ class WidgetPreviewTest {
         save("spark_pv.png", WidgetGraphics.sparkline(pv, 400, 120, WidgetGraphics.ORANGE, fill = true, strokePx = 6f))
         save("spark_load.png", WidgetGraphics.sparkline(load, 400, 120, WidgetGraphics.BLUE, fill = false, strokePx = 6f))
         save("battery.png", WidgetGraphics.battery(48.0, 66, 33))
+        save("refresh.png", WidgetGraphics.refresh(96, 0xFF8E9399.toInt()))
         save("spark_pv_left.png", WidgetGraphics.sparkline(pv, 450, 100, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f))
         save("spark_load_left.png", WidgetGraphics.sparkline(load, 450, 100, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f))
     }
