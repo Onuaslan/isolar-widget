@@ -14,7 +14,7 @@ import java.io.File
 /** Rendert die Widget-Grafiken als PNG (build/previews), damit man sie ohne Handy prüfen kann. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34])
+@Config(sdk = [34], application = android.app.Application::class)
 class WidgetPreviewTest {
 
     private val out = File("build/previews").apply { mkdirs() }
