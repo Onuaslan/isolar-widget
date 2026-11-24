@@ -24,6 +24,8 @@ object WidgetGraphics {
     fun sparkline(
         values: List<Float?>, widthPx: Int, heightPx: Int, color: Int,
         fill: Boolean, fullDay: Boolean = false, strokePx: Float = 4f,
+        /** Anteil der Breite, den die Kurve nutzt (Rest: nur gestrichelte Linie). */
+        curveFraction: Float = 1f,
     ): Bitmap {
         val w = widthPx.coerceAtLeast(10); val h = heightPx.coerceAtLeast(10)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -44,7 +46,7 @@ object WidgetGraphics {
         val span = (last - first).coerceAtLeast(1)
         val top = strokePx * 2
         val pts = idx.map { i ->
-            val x = (i - first).toFloat() / span * (w - strokePx * 2) + strokePx
+            val x = (i - first).toFloat() / span * (w * curveFraction - strokePx * 2) + strokePx
             val y = baseY - (values[i]!!.coerceAtLeast(0f) / max) * (baseY - top)
             x to y
         }
@@ -108,61 +110,3 @@ object WidgetGraphics {
     }
 }
 
-/** Tagesdiagramm mit Erzeugung (orange, gefüllt) und Verbrauch (blau) über 0–24 Uhr. */
-object DayChart {
-    fun render(pv: List<Float?>, load: List<Float?>, w: Int, h: Int, density: Float): Bitmap {
-        val d = density
-        val bmp = Bitmap.createBitmap(w.coerceAtLeast(50), h.coerceAtLeast(40), Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        val W = bmp.width.toFloat(); val H = bmp.height.toFloat()
-        val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF7B8794.toInt(); textSize = 10 * d }
-        val left = 4 * d; val right = W - 4 * d
-        val top = 14 * d; val bottom = H - 14 * d
-        val grid = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; color = 0xFFE1E5EA.toInt(); strokeWidth = 1 * d
-            pathEffect = DashPathEffect(floatArrayOf(4 * d, 4 * d), 0f)
-        }
-        val max = (pv + load).filterNotNull().maxOrNull()?.coerceAtLeast(500f) ?: 1000f
-        // Hilfslinien bei 0, 50, 100 %
-        for (f in listOf(0f, 0.5f, 1f)) c.drawLine(left, bottom - (bottom - top) * f, right, bottom - (bottom - top) * f, grid)
-        val maxText = if (max >= 1000) String.format(java.util.Locale.GERMANY, "%.1f kW", max / 1000) else "${max.toInt()} W"
-        c.drawText(maxText, left, top - 3 * d, label)
-        // Zeitachse
-        for (hr in listOf(0, 6, 12, 18, 24)) {
-            val x = left + (right - left) * hr / 24f
-            val t = "$hr"
-            val tw = label.measureText(t)
-            c.drawText(t, (x - tw / 2).coerceIn(left, right - tw), H - 2 * d, label)
-        }
-        fun series(values: List<Float?>, color: Int, fill: Boolean) {
-            val pts = values.indices.filter { values[it] != null }.map { i ->
-                val x = left + (right - left) * (i + 0.5f) / values.size
-                val y = bottom - (values[i]!!.coerceAtLeast(0f) / max) * (bottom - top)
-                x to y
-            }
-            if (pts.size < 2) return
-            val path = Path().apply {
-                moveTo(pts[0].first, pts[0].second)
-                for (k in 1 until pts.size) {
-                    val (x0, y0) = pts[k - 1]; val (x1, y1) = pts[k]
-                    val mx = (x0 + x1) / 2
-                    cubicTo(mx, y0, mx, y1, x1, y1)
-                }
-            }
-            if (fill) {
-                val area = Path(path).apply { lineTo(pts.last().first, bottom); lineTo(pts.first().first, bottom); close() }
-                c.drawPath(area, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    shader = LinearGradient(0f, top, 0f, bottom,
-                        ColorUtils.setAlphaComponent(color, 120), ColorUtils.setAlphaComponent(color, 15), Shader.TileMode.CLAMP)
-                })
-            }
-            c.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.STROKE; this.color = color; strokeWidth = 2.2f * d
-                strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-            })
-        }
-        series(pv, WidgetGraphics.ORANGE, fill = true)
-        series(load, WidgetGraphics.BLUE, fill = false)
-        return bmp
-    }
-}

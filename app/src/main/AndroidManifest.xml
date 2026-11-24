@@ -44,33 +44,9 @@
         </receiver>
 
         <receiver
-            android:name=".ui.widget.SmallTallWidgetReceiver"
-            android:exported="true"
-            android:label="Mein Zuhause 2×3">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_small_tall_info" />
-        </receiver>
-
-        <receiver
-            android:name=".ui.widget.PvMediumWidgetReceiver"
-            android:exported="true"
-            android:label="PV-Übersicht 4×3">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_medium_info" />
-        </receiver>
-
-        <receiver
             android:name=".ui.widget.WideWidgetReceiver"
             android:exported="true"
-            android:label="Mein Zuhause Kurven 4×2">
+            android:label="Mein Zuhause 4×2">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -79,16 +55,5 @@
                 android:resource="@xml/widget_wide_info" />
         </receiver>
 
-        <receiver
-            android:label="PV-Übersicht 4×4"
-            android:name=".ui.widget.PvWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/pv_widget_info" />
-        </receiver>
     </application>
 </manifest>

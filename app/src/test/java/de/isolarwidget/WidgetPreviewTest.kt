@@ -1,7 +1,6 @@
 package de.isolarwidget
 
 import android.graphics.Bitmap
-import de.isolarwidget.ui.widget.EnergyFlowGraphic
 import de.isolarwidget.ui.widget.WidgetGraphics
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,23 +24,13 @@ class WidgetPreviewTest {
     }
 
     @Test
-    fun energyFlow() {
-        val d = 2.75f
-        save("energyflow_charging.png", EnergyFlowGraphic.render(
-            EnergyFlowGraphic.Values(pvW = 2600.0, loadW = 1300.0, batteryW = 1300.0, socPct = 48.0, gridW = 0.0),
-            (330 * d).toInt(), (210 * d).toInt(), d))
-        save("energyflow_import.png", EnergyFlowGraphic.render(
-            EnergyFlowGraphic.Values(pvW = 0.0, loadW = 850.0, batteryW = -400.0, socPct = 12.0, gridW = 450.0),
-            (330 * d).toInt(), (210 * d).toInt(), d))
-    }
-
-    @Test
     fun sparklines() {
         val pv = List(96) { i -> if (i in 30..66) (Math.sin((i - 30) / 36.0 * Math.PI) * 3000).toFloat() else null }
         val load = List(96) { i -> if (i <= 60) (400 + 300 * Math.sin(i / 6.0) + if (i in 70..75) 1500 else 0).toFloat() else null }
         save("spark_pv.png", WidgetGraphics.sparkline(pv, 400, 120, WidgetGraphics.ORANGE, fill = true, strokePx = 6f))
         save("spark_load.png", WidgetGraphics.sparkline(load, 400, 120, WidgetGraphics.BLUE, fill = false, strokePx = 6f))
         save("battery.png", WidgetGraphics.battery(48.0, 66, 33))
-        save("daychart.png", de.isolarwidget.ui.widget.DayChart.render(pv, load, (310 * 2.75f).toInt(), (130 * 2.75f).toInt(), 2.75f))
+        save("spark_pv_left.png", WidgetGraphics.sparkline(pv, 450, 100, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f))
+        save("spark_load_left.png", WidgetGraphics.sparkline(load, 450, 100, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f))
     }
 }

@@ -2,8 +2,5 @@
 <resources>
     <string name="app_name">PV-Widget</string>
     <string name="widget_small_description">Mein Zuhause 2×2: Tagesertrag, Tagesverbrauch, Batterie</string>
-    <string name="widget_small_tall_description">Mein Zuhause 2×3: mit Tageskurven</string>
-    <string name="widget_wide_description">Mein Zuhause 4×2: Tageskurven für Ertrag und Verbrauch</string>
-    <string name="widget_medium_description">PV-Übersicht 4×3: alle Werte mit Tagesdiagramm</string>
-    <string name="widget_description">PV-Übersicht 4×4: alle Werte mit Tagesdiagramm</string>
+    <string name="widget_wide_description">Mein Zuhause 4×2: mit Kurven für Ertrag und Verbrauch</string>
 </resources>
