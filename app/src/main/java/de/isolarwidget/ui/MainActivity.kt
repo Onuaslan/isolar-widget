@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Screen(ui: UiState, snap: PvSnapshot) {
         var pasted by remember { mutableStateOf("") }
+        var portalUrl by remember { mutableStateOf("") }
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -110,11 +111,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     Text(
-                        "Region = Server, auf dem dein iSolarCloud-Konto liegt (Deutschland meist Europa). " +
-                            "Die im Portal angezeigte Authorize-URL (.com.hk) ist nur ein Beispiel; " +
-                            "Anmeldeseite und API-Server folgen hier immer der gewählten Region.",
+                        "Region muss zum Server deiner Developer-App passen. Am einfachsten die Authorize-URL " +
+                            "aus dem Developer-Portal unten einfügen, dann werden Region und ID übernommen.",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    OutlinedTextField(portalUrl, { portalUrl = it },
+                        label = { Text("Authorize-URL aus dem Portal (setzt Region + ID)") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    if (portalUrl.isNotBlank()) TextButton(onClick = { vm.applyPortalUrl(portalUrl); portalUrl = "" }) {
+                        Text("Aus URL übernehmen")
+                    }
                     OutlinedTextField(ui.appKey, { v -> vm.edit { it.copy(appKey = v) } },
                         label = { Text("Appkey") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(ui.secretKey, { v -> vm.edit { it.copy(secretKey = v) } },

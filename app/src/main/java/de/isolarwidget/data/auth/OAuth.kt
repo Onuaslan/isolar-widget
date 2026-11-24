@@ -16,7 +16,20 @@ object OAuth {
         val enc = { s: String -> URLEncoder.encode(s, "UTF-8") }
         return "https://${region.authWebHost}/?state=${enc(state)}" +
             "#/authorized-app?cloudId=${region.cloudId}&applicationId=${enc(appId)}" +
-            "&redirectUrl=${enc(REDIRECT_URI)}"
+            // Unkodiert, exakt wie im Portal angezeigt: die Sungrow-Seite vergleicht den String 1:1
+            // (kodiert -> "invalid_redirect_url").
+            "&redirectUrl=$REDIRECT_URI"
+    }
+
+    data class PortalInfo(val region: Region, val appId: String)
+
+    /** Liest Region und Application-ID aus der im Portal angezeigten Authorize-URL. */
+    fun parsePortalUrl(url: String): PortalInfo? {
+        val uri = Uri.parse(url.trim())
+        val region = Region.entries.firstOrNull { it.authWebHost.equals(uri.host, ignoreCase = true) } ?: return null
+        val fragmentQuery = Uri.parse("x://x?" + (uri.fragment?.substringAfter('?') ?: ""))
+        val appId = fragmentQuery.getQueryParameter("applicationId") ?: return null
+        return PortalInfo(region, appId)
     }
 
     data class Callback(val code: String, val state: String?)

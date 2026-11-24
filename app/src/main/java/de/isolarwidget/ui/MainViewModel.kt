@@ -50,6 +50,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun edit(transform: (UiState) -> UiState) = _ui.update(transform)
 
+    fun applyPortalUrl(url: String) {
+        val info = de.isolarwidget.data.auth.OAuth.parsePortalUrl(url)
+        _ui.update {
+            if (info == null) it.copy(message = "Authorize-URL nicht erkannt")
+            else it.copy(region = info.region, appId = info.appId,
+                message = "Übernommen: Region ${info.region.label}, Application-ID ${info.appId}")
+        }
+    }
+
     /** @return Autorisierungs-URL zum Öffnen im Browser, oder null wenn Angaben fehlen. */
     fun loginUrl(): String? {
         val s = _ui.value

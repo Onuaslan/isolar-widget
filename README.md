@@ -19,7 +19,7 @@ Die offizielle iSolarCloud Open API braucht eine eigene, von Sungrow freigegeben
 (International). Die App baut diese URL selbst und nimmt Host und `cloudId` aus der gewählten Region, z. B. Europa →
 `web3.isolarcloud.eu`, `cloudId=3`, API `gateway.isolarcloud.eu`. Maßgeblich ist der Server, auf dem dein iSolarCloud-Konto
 liegt. Anmeldeseite und API-Gateway müssen zur selben Region gehören, sonst passen Code/Token nicht zum Server.
-Klappt die Anmeldung mit „Europa“ nicht (Konto unbekannt), „International“ wählen.
+Bei `invalid_redirect_url`: Die im Portal angezeigte Authorize-URL in der App ins Feld „Authorize-URL aus dem Portal“ einfügen. Dann übernimmt die App Region und Application-ID passend zur Developer-App. Die `redirectUrl` wird unkodiert gesendet, genau wie im Portal angezeigt.
 
 **RSA public key:** wird für den OAuth2-Weg nicht gebraucht (Requests gehen per HTTPS mit `x-access-key` + Bearer-Token).
 Der Schlüssel dient dem alten V1-Login mit Benutzer/Passwort, den diese App nicht nutzt. Daher kein Eingabefeld.
