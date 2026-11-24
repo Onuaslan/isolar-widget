@@ -6,7 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.coerceAtLeast
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +31,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
@@ -74,7 +75,12 @@ object Widgets {
 
 /** Basis: liest ausschließlich den lokalen Cache – kein Netzwerk beim Rendern. */
 abstract class CacheWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Exact
+    /**
+     * Feste Layout-Stufen statt SizeMode.Exact: manche Launcher melden bei Exact zu kleine Höhen,
+     * dann wurde die Grafik gestaucht. Responsive wählt verlässlich die passende Stufe.
+     */
+    abstract val breakpoints: Set<DpSize>
+    override val sizeMode: SizeMode get() = SizeMode.Responsive(breakpoints)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val cache = PvCache(context)
@@ -91,6 +97,7 @@ abstract class CacheWidget : GlanceAppWidget() {
 // ---------------- 1) Klein: "Mein Zuhause" ----------------
 
 class SmallWidget : CacheWidget() {
+    override val breakpoints = setOf(DpSize(110.dp, 110.dp), DpSize(110.dp, 180.dp))
     @Composable
     override fun Content(s: PvSnapshot) {
         val size = LocalSize.current
@@ -115,6 +122,7 @@ class SmallWidget : CacheWidget() {
 // ---------------- 2) Breit: Mini-Kurven ----------------
 
 class WideWidget : CacheWidget() {
+    override val breakpoints = setOf(DpSize(250.dp, 110.dp), DpSize(250.dp, 180.dp))
     @Composable
     override fun Content(s: PvSnapshot) {
         val size = LocalSize.current
@@ -144,15 +152,16 @@ class WideWidget : CacheWidget() {
 
 /** Klassenname bleibt "PvWidget", damit bereits platzierte Widgets weiter funktionieren. */
 class PvWidget : CacheWidget() {
+    override val breakpoints = setOf(DpSize(250.dp, 180.dp), DpSize(250.dp, 300.dp))
     @Composable
     override fun Content(s: PvSnapshot) {
         val size = LocalSize.current
         val density = LocalContext.current.resources.displayMetrics.density
         val v = s.values
         val flowW = size.width - 20.dp
-        val twoRows = size.height >= 280.dp
-        // Header ~28dp, Kachelreihe ~46dp, Abstände/Padding ~28dp
-        val flowH = (size.height - 28.dp - 28.dp - (if (twoRows) 98.dp else 46.dp)).coerceAtLeast(90.dp)
+        val twoRows = size.height >= 300.dp
+        // Feste Proportion; das Bild füllt per Gewicht den freien Platz und skaliert ohne Verzerrung.
+        val flowH = flowW * 0.62f
         val flow = EnergyFlowGraphic.render(
             EnergyFlowGraphic.Values(v?.pvPowerW, v?.loadPowerW, v?.batteryPowerW, v?.batterySocPct, v?.gridPowerW),
             (flowW.value * density).toInt(), (flowH.value * density).toInt(), density,
@@ -165,21 +174,22 @@ class PvWidget : CacheWidget() {
             Image(
                 provider = ImageProvider(flow),
                 contentDescription = "Energiefluss",
-                modifier = GlanceModifier.fillMaxWidth().height(flowH),
+                contentScale = ContentScale.Fit,
+                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
             )
-            Spacer(GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.height(6.dp))
             Row(GlanceModifier.fillMaxWidth()) {
-                KwhTile("PV-Erzeugung", v?.dailyYieldKwh)
+                KwhTile("PV-Ertrag", v?.dailyYieldKwh)
                 Spacer(GlanceModifier.width(6.dp))
-                KwhTile("Hausverbrauch", v?.consumptionTodayKwh)
+                KwhTile("Verbrauch", v?.consumptionTodayKwh)
                 Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Netzbezug", v?.gridBuyTodayKwh)
             }
             if (twoRows) Spacer(GlanceModifier.height(6.dp))
             if (twoRows) Row(GlanceModifier.fillMaxWidth()) {
-                KwhTile("Batt. geladen", v?.batteryChargeTodayKwh)
+                KwhTile("Geladen", v?.batteryChargeTodayKwh)
                 Spacer(GlanceModifier.width(6.dp))
-                KwhTile("Batt. entladen", v?.batteryDischargeTodayKwh)
+                KwhTile("Entladen", v?.batteryDischargeTodayKwh)
                 Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Eingespeist", v?.feedInTodayKwh)
             }
@@ -265,6 +275,7 @@ private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill:
     Image(
         provider = ImageProvider(bmp),
         contentDescription = null,
+        contentScale = ContentScale.FillBounds,
         modifier = GlanceModifier.fillMaxWidth().height(height),
     )
 }
