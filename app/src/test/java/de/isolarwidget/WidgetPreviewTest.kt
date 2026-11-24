@@ -42,5 +42,6 @@ class WidgetPreviewTest {
         save("spark_pv.png", WidgetGraphics.sparkline(pv, 400, 120, WidgetGraphics.ORANGE, fill = true, strokePx = 6f))
         save("spark_load.png", WidgetGraphics.sparkline(load, 400, 120, WidgetGraphics.BLUE, fill = false, strokePx = 6f))
         save("battery.png", WidgetGraphics.battery(48.0, 66, 33))
+        save("daychart.png", de.isolarwidget.ui.widget.DayChart.render(pv, load, (310 * 2.75f).toInt(), (130 * 2.75f).toInt(), 2.75f))
     }
 }

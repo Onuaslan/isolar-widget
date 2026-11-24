@@ -153,47 +153,77 @@ class WideWidget : CacheWidget() {
 /** Klassenname bleibt "PvWidget", damit bereits platzierte Widgets weiter funktionieren. */
 class PvWidget : CacheWidget() {
     override val breakpoints = setOf(DpSize(250.dp, 180.dp), DpSize(250.dp, 300.dp))
+
     @Composable
     override fun Content(s: PvSnapshot) {
         val size = LocalSize.current
         val density = LocalContext.current.resources.displayMetrics.density
         val v = s.values
-        val flowW = size.width - 20.dp
-        val twoRows = size.height >= 300.dp
-        // Feste Proportion; das Bild füllt per Gewicht den freien Platz und skaliert ohne Verzerrung.
-        val flowH = flowW * 0.62f
-        val flow = EnergyFlowGraphic.render(
-            EnergyFlowGraphic.Values(v?.pvPowerW, v?.loadPowerW, v?.batteryPowerW, v?.batterySocPct, v?.gridPowerW),
-            (flowW.value * density).toInt(), (flowH.value * density).toInt(), density,
-        )
+        val curve = s.todayCurve()
+        val chartW = size.width - 40.dp
+        val chartH = chartW * 0.42f
+        val chart = DayChart.render(curve.pv, curve.load, (chartW.value * density).toInt(), (chartH.value * density).toInt(), density)
         Column(
             modifier = GlanceModifier.fillMaxSize().background(BG_SOFT).cornerRadius(20.dp).padding(10.dp)
                 .clickable(actionStartActivity<MainActivity>()),
         ) {
             Box(GlanceModifier.padding(horizontal = 4.dp)) { Header(s, refresh = true) }
-            Image(
-                provider = ImageProvider(flow),
-                contentDescription = "Energiefluss",
-                contentScale = ContentScale.Fit,
-                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-            )
             Spacer(GlanceModifier.height(6.dp))
+            // Aktuelle Leistung
             Row(GlanceModifier.fillMaxWidth()) {
-                KwhTile("PV-Ertrag", v?.dailyYieldKwh)
+                InfoTile("PV jetzt", Format.power(v?.pvPowerW))
                 Spacer(GlanceModifier.width(6.dp))
-                KwhTile("Verbrauch", v?.consumptionTodayKwh)
+                InfoTile("Haus jetzt", Format.power(v?.loadPowerW))
                 Spacer(GlanceModifier.width(6.dp))
-                KwhTile("Netzbezug", v?.gridBuyTodayKwh)
+                InfoTile(gridCaption(v?.gridPowerW), Format.power(v?.gridPowerW?.let { kotlin.math.abs(it) }))
+                Spacer(GlanceModifier.width(6.dp))
+                InfoTile(batteryCaption(v?.batteryPowerW), Format.percent(v?.batterySocPct))
             }
-            if (twoRows) Spacer(GlanceModifier.height(6.dp))
-            if (twoRows) Row(GlanceModifier.fillMaxWidth()) {
+            Spacer(GlanceModifier.height(6.dp))
+            // Tagesdiagramm Erzeugung/Verbrauch
+            Column(GlanceModifier.fillMaxWidth().defaultWeight().background(BG).cornerRadius(14.dp).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("● ", style = TextStyle(color = ColorProvider(Color(0xFFF39C12)), fontSize = 12.sp))
+                    Text("Erzeugung ${Format.kwh(v?.dailyYieldKwh)}", style = TextStyle(color = VALUE, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    Spacer(GlanceModifier.width(12.dp))
+                    Text("● ", style = TextStyle(color = ColorProvider(Color(0xFF3D7BF7)), fontSize = 12.sp))
+                    Text("Verbrauch ${Format.kwh(v?.consumptionTodayKwh)}", style = TextStyle(color = VALUE, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
+                Image(
+                    provider = ImageProvider(chart),
+                    contentDescription = "Tagesverlauf Erzeugung und Verbrauch",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                )
+            }
+            Spacer(GlanceModifier.height(6.dp))
+            // Tageswerte
+            Row(GlanceModifier.fillMaxWidth()) {
+                KwhTile("Netzbezug", v?.gridBuyTodayKwh)
+                Spacer(GlanceModifier.width(6.dp))
+                KwhTile("Eingespeist", v?.feedInTodayKwh)
+                Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Geladen", v?.batteryChargeTodayKwh)
                 Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Entladen", v?.batteryDischargeTodayKwh)
-                Spacer(GlanceModifier.width(6.dp))
-                KwhTile("Eingespeist", v?.feedInTodayKwh)
             }
         }
+    }
+}
+
+private fun gridCaption(w: Double?) = when {
+    w == null -> "Netz"; w > 30 -> "Netz Bezug"; w < -30 -> "Einspeisung"; else -> "Netz"
+}
+
+private fun batteryCaption(w: Double?) = when {
+    w == null -> "Batterie"; w > 30 -> "Batt. lädt"; w < -30 -> "Batt. entlädt"; else -> "Batterie"
+}
+
+@Composable
+private fun androidx.glance.layout.RowScope.InfoTile(label: String, value: String) {
+    Column(GlanceModifier.defaultWeight().background(BG).cornerRadius(12.dp).padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Text(value, style = TextStyle(color = VALUE, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(label, style = TextStyle(color = LABEL, fontSize = 10.sp), maxLines = 1)
     }
 }
 
@@ -201,10 +231,10 @@ class PvWidget : CacheWidget() {
 private fun androidx.glance.layout.RowScope.KwhTile(label: String, kwh: Double?) {
     Column(GlanceModifier.defaultWeight().background(BG).cornerRadius(12.dp).padding(horizontal = 8.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(Format.number1(kwh), style = TextStyle(color = VALUE, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(Format.number1(kwh), style = TextStyle(color = VALUE, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
             Text(" kWh", style = TextStyle(color = VALUE, fontSize = 10.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = 2.dp))
         }
-        Text(label, style = TextStyle(color = LABEL, fontSize = 11.sp), maxLines = 1)
+        Text(label, style = TextStyle(color = LABEL, fontSize = 10.sp), maxLines = 1)
     }
 }
 
