@@ -68,15 +68,18 @@ object EnergyFlowGraphic {
         }
         fill.color = ROOF; c.drawPath(roof, fill); c.drawPath(roof, stroke)
 
-        // Solarmodule auf der rechten Dachhälfte
+        // Solarmodule auf der linken Dachhälfte (Seite des Solar-Labels), parallel zur Dachkante
         val midX = (hx0 + hx1) / 2
+        val eaveX = hx0 - 10 * d; val eaveY = wallTop + 2 * d
+        fun roofPt(t: Float) = (midX + (eaveX - midX) * t) to (roofPeak + (eaveY - roofPeak) * t)
+        val inset = 7 * d
         val panel = Path().apply {
-            val a = 0.22f; val b = 0.82f
-            fun px(t: Float, side: Float) = midX + (hx1 + 10 * d - midX) * t + side
-            fun py(t: Float) = roofPeak + (wallTop + 2 * d - roofPeak) * t
-            moveTo(px(a, 0f), py(a)); lineTo(px(b, 0f), py(b))
-            lineTo(px(b, -18 * d), py(b) + 0f); lineTo(px(a, -18 * d), py(a)); close()
+            val (ax, ay) = roofPt(0.18f); val (bx, by) = roofPt(0.86f)
+            moveTo(ax + inset * 0.6f, ay + inset); lineTo(bx + inset * 0.6f, by + inset * 0.2f)
+            lineTo(bx + inset * 2.2f, by - inset * 0.2f + inset * 0.6f - 0.5f * d)
+            lineTo(ax + inset * 2.2f, ay + inset * 2.2f); close()
         }
+        val panelCenter = roofPt(0.5f).let { (x, y) -> (x + inset * 1.4f) to (y + inset * 1.3f) }
         fill.color = PANEL; c.drawPath(panel, fill)
         stroke.color = PANEL_LINE; c.drawPath(panel, stroke); stroke.color = OUTLINE
 
@@ -99,7 +102,8 @@ object EnergyFlowGraphic {
         for (k in 1..2) c.drawLine(bat.left, bat.top + bh * k / 3, bat.right, bat.top + bh * k / 3, stroke)
         val soc = ((v.socPct ?: 0.0) / 100).coerceIn(0.0, 1.0).toFloat()
         fill.color = socColor(v.socPct)
-        c.drawRect(bat.left + 3 * d, bat.bottom - 3 * d - (bh - 6 * d) * soc, bat.left + 6 * d, bat.bottom - 3 * d, fill)
+        val lvl = RectF(bat.left + 3 * d, bat.bottom - 3 * d - (bh - 6 * d) * soc, bat.right - 3 * d, bat.bottom - 3 * d)
+        fill.alpha = 170; c.drawRoundRect(lvl, 1.5f * d, 1.5f * d, fill); fill.alpha = 255
 
         // ---- Strommast (rechts) ----
         val mx = W * 0.86f; val mTop = sceneTop + (ground - sceneTop) * 0.15f
@@ -124,13 +128,14 @@ object EnergyFlowGraphic {
         val pvActive = (v.pvW ?: 0.0) > 30
         val gridColor = when { (v.gridW ?: 0.0) > 30 -> BLUE; (v.gridW ?: 0.0) < -30 -> GREEN; else -> null }
         val battColor = when { (v.batteryW ?: 0.0) > 30 -> GREEN; (v.batteryW ?: 0.0) < -30 -> ORANGE; else -> null }
-        val solarX = W * 0.14f; val houseX = W * 0.60f
+        val solarX = W * 0.14f; val houseX = W * 0.62f
         val battX = W * 0.14f; val netzX = W * 0.66f
 
         val topLabelBottom = H * 0.21f
-        leader(solarX, topLabelBottom, roofPeak + (wallTop - roofPeak) * 0.55f, if (pvActive) ORANGE else null)
-        c.drawLine(solarX, roofPeak + (wallTop - roofPeak) * 0.55f, midX + (hx1 - midX) * 0.35f, roofPeak + (wallTop - roofPeak) * 0.55f,
+        leader(solarX, topLabelBottom, panelCenter.second, if (pvActive) ORANGE else null)
+        c.drawLine(solarX, panelCenter.second, panelCenter.first, panelCenter.second,
             Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = lineW; color = if (pvActive) ORANGE else LINE_IDLE })
+        if (pvActive) { fill.color = ORANGE; c.drawCircle(panelCenter.first, panelCenter.second, 2.5f * d, fill) }
         leader(houseX + 0f, topLabelBottom, wallTop + 6 * d, if ((v.loadW ?: 0.0) > 30) BLUE else null)
 
         val bottomLabelTop = H * 0.80f
