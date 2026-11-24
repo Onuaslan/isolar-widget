@@ -162,14 +162,16 @@ private fun Header(s: PvSnapshot) {
             modifier = GlanceModifier.size(22.dp, 12.dp).clickable(actionRunCallback<RefreshAction>()),
         )
     }
-    // Nur bei veraltetem Stand bzw. während der Aktualisierung eine kleine Zeile
+    // Uhrzeit der letzten Aktualisierung, immer sichtbar; orange, wenn veraltet
     val outdated = s.isOutdated() && !s.syncing
-    if (s.syncing || outdated) {
-        Text(
-            if (s.syncing) "Aktualisiere…" else "Stand ${Format.time(s.lastUpdatedEpochMs)}",
-            style = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp), maxLines = 1,
-        )
-    }
+    Text(
+        when {
+            s.syncing -> "Aktualisiere…"
+            outdated -> "Stand ${Format.time(s.lastUpdatedEpochMs)} · nicht aktuell"
+            else -> "Stand ${Format.time(s.lastUpdatedEpochMs)}"
+        },
+        style = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp), maxLines = 1,
+    )
 }
 
 @Composable
