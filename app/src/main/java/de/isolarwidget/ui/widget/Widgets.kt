@@ -1,6 +1,7 @@
 package de.isolarwidget.ui.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,7 +17,6 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -138,7 +138,7 @@ private fun Card(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = GlanceModifier.fillMaxSize().background(BG).cornerRadius(22.dp)
             .padding(horizontal = 18.dp, vertical = 16.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+            .clickable(actionRunCallback<OpenIsolarAction>()),
         content = content,
     )
 }
@@ -200,6 +200,26 @@ private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill:
         contentScale = ContentScale.FillBounds,
         modifier = GlanceModifier.fillMaxWidth().height(height),
     )
+}
+
+/**
+ * Tipp aufs Widget: öffnet die Sungrow-App iSolarCloud. Gesucht wird unter den installierten Apps
+ * nach dem Namen, weil die Paket-ID nicht offiziell dokumentiert ist. Fehlt sie, öffnet sich diese App.
+ */
+class OpenIsolarAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val pm = context.packageManager
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val target = pm.queryIntentActivities(launcher, 0).firstOrNull { info ->
+            val pkg = info.activityInfo.packageName
+            pkg != context.packageName && (
+                info.loadLabel(pm).toString().contains("isolarcloud", ignoreCase = true) ||
+                    pkg.contains("isolarcloud", ignoreCase = true))
+        }
+        val intent = target?.let { pm.getLaunchIntentForPackage(it.activityInfo.packageName) }
+            ?: Intent(context, MainActivity::class.java)
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
 }
 
 /** Startet einen einmaligen Sync und zeigt solange "…". */

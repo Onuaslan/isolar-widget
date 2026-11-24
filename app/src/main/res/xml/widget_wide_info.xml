@@ -3,7 +3,7 @@
     android:description="@string/widget_wide_description"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewLayout="@layout/preview_wide"
-    android:previewImage="@drawable/ic_sun"
+    android:previewImage="@drawable/preview_wide"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
