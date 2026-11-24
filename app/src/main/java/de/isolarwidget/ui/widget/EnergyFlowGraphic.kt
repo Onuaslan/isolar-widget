@@ -72,14 +72,18 @@ object EnergyFlowGraphic {
         val midX = (hx0 + hx1) / 2
         val eaveX = hx0 - 10 * d; val eaveY = wallTop + 2 * d
         fun roofPt(t: Float) = (midX + (eaveX - midX) * t) to (roofPeak + (eaveY - roofPeak) * t)
-        val inset = 7 * d
+        // Modulfeld als Streifen entlang der Dachschräge, nach innen versetzt
+        val dx = eaveX - midX; val dy = eaveY - roofPeak
+        val len = kotlin.math.sqrt(dx * dx + dy * dy)
+        val nx = dy / len; val ny = -dx / len          // Normale ins Dach hinein (nach rechts unten)
+        val off = 3 * d; val ph = 15 * d
+        val (ax, ay) = roofPt(0.22f); val (bx, by) = roofPt(0.72f)
         val panel = Path().apply {
-            val (ax, ay) = roofPt(0.18f); val (bx, by) = roofPt(0.86f)
-            moveTo(ax + inset * 0.6f, ay + inset); lineTo(bx + inset * 0.6f, by + inset * 0.2f)
-            lineTo(bx + inset * 2.2f, by - inset * 0.2f + inset * 0.6f - 0.5f * d)
-            lineTo(ax + inset * 2.2f, ay + inset * 2.2f); close()
+            moveTo(ax + nx * off, ay + ny * off); lineTo(bx + nx * off, by + ny * off)
+            lineTo(bx + nx * (off + ph), by + ny * (off + ph)); lineTo(ax + nx * (off + ph), ay + ny * (off + ph)); close()
         }
-        val panelCenter = roofPt(0.5f).let { (x, y) -> (x + inset * 1.4f) to (y + inset * 1.3f) }
+        val (cxr, cyr) = roofPt(0.47f)
+        val panelCenter = (cxr + nx * (off + ph / 2)) to (cyr + ny * (off + ph / 2))
         fill.color = PANEL; c.drawPath(panel, fill)
         stroke.color = PANEL_LINE; c.drawPath(panel, stroke); stroke.color = OUTLINE
 
