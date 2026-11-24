@@ -26,6 +26,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="${oauthScheme}" android:host="${oauthHost}" />
+                <!-- Einrichtungs-Link: isolarwidget://setup?region=EUROPE&appkey=...&secret=...&appid=... -->
+                <data android:scheme="${oauthScheme}" android:host="setup" />
             </intent-filter>
         </activity>
 

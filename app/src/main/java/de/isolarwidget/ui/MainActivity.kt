@@ -69,7 +69,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val data = intent?.data ?: return
-        if (data.toString().startsWith(OAuth.REDIRECT_URI)) vm.handleRedirect(data)
+        when {
+            data.scheme == "isolarwidget" && data.host == "setup" -> vm.applyPortalUrl(data.toString())
+            data.toString().startsWith(OAuth.REDIRECT_URI) -> vm.handleRedirect(data)
+        }
     }
 
     private fun openLogin() {
@@ -116,7 +119,7 @@ class MainActivity : ComponentActivity() {
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedTextField(portalUrl, { portalUrl = it },
-                        label = { Text("Authorize-URL aus dem Portal (setzt Region + ID)") },
+                        label = { Text("Einrichtungs-Link oder Authorize-URL einfügen") },
                         singleLine = true, modifier = Modifier.fillMaxWidth())
                     if (portalUrl.isNotBlank()) TextButton(onClick = { vm.applyPortalUrl(portalUrl); portalUrl = "" }) {
                         Text("Aus URL übernehmen")

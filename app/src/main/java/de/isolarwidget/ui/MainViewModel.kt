@@ -51,6 +51,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun edit(transform: (UiState) -> UiState) = _ui.update(transform)
 
     fun applyPortalUrl(url: String) {
+        de.isolarwidget.data.auth.OAuth.parseSetupLink(url)?.let { setup ->
+            _ui.update {
+                it.copy(region = setup.region, appKey = setup.appKey, secretKey = setup.secretKey, appId = setup.appId,
+                    message = "Zugangsdaten übernommen (${setup.region.label}, ID ${setup.appId}). Jetzt anmelden.")
+            }
+            return
+        }
         val info = de.isolarwidget.data.auth.OAuth.parsePortalUrl(url)
         _ui.update {
             if (info == null) it.copy(message = "Authorize-URL nicht erkannt")

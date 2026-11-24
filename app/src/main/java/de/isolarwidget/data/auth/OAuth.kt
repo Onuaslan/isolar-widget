@@ -32,6 +32,18 @@ object OAuth {
         return PortalInfo(region, appId)
     }
 
+    data class Setup(val region: Region, val appKey: String, val secretKey: String, val appId: String)
+
+    /** Einrichtungs-Link, damit Zugangsdaten nicht abgetippt werden müssen. Nichts davon steht im Repo. */
+    fun parseSetupLink(text: String): Setup? {
+        val uri = Uri.parse(text.trim())
+        if (uri.scheme != "isolarwidget" || uri.host != "setup") return null
+        val appKey = uri.getQueryParameter("appkey") ?: return null
+        val secret = uri.getQueryParameter("secret") ?: return null
+        val appId = uri.getQueryParameter("appid") ?: return null
+        return Setup(Region.fromName(uri.getQueryParameter("region")), appKey, secret, appId)
+    }
+
     data class Callback(val code: String, val state: String?)
 
     /** Liest code/state aus der Redirect-URL (auch wenn der Nutzer die URL manuell einfügt). */
