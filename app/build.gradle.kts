@@ -44,6 +44,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
 dependencies {
@@ -67,4 +68,5 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.androidx.browser)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
 }

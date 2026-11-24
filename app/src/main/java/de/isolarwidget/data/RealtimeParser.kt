@@ -41,13 +41,17 @@ object RealtimeParser {
     const val DEV_EXPORT = "13121"
     val DEVICE_POINTS = listOf("13003", "13011", "13119", DEV_EXPORT, "13126", "13141", DEV_PURCHASED, "13150")
 
-    /** Netz aus Gerätedaten: Bezug − Einspeisung (+ Bezug / − Einspeisung). */
-    fun parseDeviceGrid(resultData: JsonObject): Double? {
-        val p = deviceMap(resultData) ?: return null
-        val buy = p.num("p$DEV_PURCHASED")
-        val sell = p.num("p$DEV_EXPORT")
-        if (buy == null && sell == null) return null
-        return (buy ?: 0.0) - (sell ?: 0.0)
+    const val DEV_BATT_CHARGE = "13126"
+    const val DEV_BATT_DISCHARGE = "13150"
+
+    /** Netz (Bezug − Einspeisung) und Batterie (Laden − Entladen) aus Gerätedaten, je W. */
+    fun parseDevice(resultData: JsonObject): Pair<Double?, Double?> {
+        val p = deviceMap(resultData) ?: return null to null
+        fun diff(a: String, b: String): Double? {
+            val x = p.num("p$a"); val y = p.num("p$b")
+            return if (x == null && y == null) null else (x ?: 0.0) - (y ?: 0.0)
+        }
+        return diff(DEV_PURCHASED, DEV_EXPORT) to diff(DEV_BATT_CHARGE, DEV_BATT_DISCHARGE)
     }
 
     fun deviceMap(resultData: JsonObject): JsonObject? =

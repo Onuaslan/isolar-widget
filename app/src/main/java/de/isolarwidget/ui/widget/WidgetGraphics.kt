@@ -75,7 +75,13 @@ object WidgetGraphics {
     }
 
     /** Batterie-Symbol mit Füllstand: grün ≥ 30 %, orange ≥ 15 %, sonst rot; grau ohne Wert. */
-    fun battery(socPct: Double?, widthPx: Int, heightPx: Int): Bitmap {
+    fun battery(socPct: Double?, widthPx: Int, heightPx: Int, vertical: Boolean = false): Bitmap {
+        if (vertical) {
+            // Horizontal zeichnen und um 90° drehen (Pol nach oben)
+            val horiz = battery(socPct, heightPx, widthPx, vertical = false)
+            val m = android.graphics.Matrix().apply { postRotate(-90f) }
+            return Bitmap.createBitmap(horiz, 0, 0, horiz.width, horiz.height, m, true)
+        }
         val w = widthPx.coerceAtLeast(12); val h = heightPx.coerceAtLeast(6)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)

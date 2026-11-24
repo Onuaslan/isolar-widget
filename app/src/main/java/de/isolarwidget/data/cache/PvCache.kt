@@ -30,6 +30,7 @@ class PvCache(context: Context) {
         it.putOrRemove(GRID, values.gridPowerW)
         it.putOrRemove(YIELD, values.dailyYieldKwh)
         it.putOrRemove(LOAD, values.loadPowerW)
+        it.putOrRemove(BATT_POWER, values.batteryPowerW)
         it.putOrRemove(CONSUMPTION, values.consumptionTodayKwh)
         it.putOrRemove(BUY, values.gridBuyTodayKwh)
         it.putOrRemove(FEED, values.feedInTodayKwh)
@@ -65,7 +66,7 @@ class PvCache(context: Context) {
     private fun Preferences.toSnapshot() = PvSnapshot(
         values = if (this[HAS_VALUES] == true) PvValues(
             pvPowerW = this[PV], batterySocPct = this[SOC], gridPowerW = this[GRID], dailyYieldKwh = this[YIELD],
-            loadPowerW = this[LOAD], consumptionTodayKwh = this[CONSUMPTION], gridBuyTodayKwh = this[BUY],
+            loadPowerW = this[LOAD], batteryPowerW = this[BATT_POWER], consumptionTodayKwh = this[CONSUMPTION], gridBuyTodayKwh = this[BUY],
             feedInTodayKwh = this[FEED], batteryChargeTodayKwh = this[CHARGE], batteryDischargeTodayKwh = this[DISCHARGE],
         ) else null,
         lastUpdatedEpochMs = this[UPDATED],
@@ -82,6 +83,7 @@ class PvCache(context: Context) {
         private val GRID = doublePreferencesKey("grid_power_w")
         private val YIELD = doublePreferencesKey("daily_yield_kwh")
         private val LOAD = doublePreferencesKey("load_power_w")
+        private val BATT_POWER = doublePreferencesKey("battery_power_w")
         private val CONSUMPTION = doublePreferencesKey("consumption_today_kwh")
         private val BUY = doublePreferencesKey("grid_buy_today_kwh")
         private val FEED = doublePreferencesKey("feed_in_today_kwh")

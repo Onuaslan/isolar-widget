@@ -26,6 +26,14 @@ jobs:
       - name: Unit-Tests
         run: gradle :app:testDebugUnitTest --no-daemon
 
+      - name: Grafik-Vorschau hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: widget-previews
+          path: app/build/previews/
+          if-no-files-found: ignore
+
       - name: Debug-APK bauen
         run: gradle :app:assembleDebug --no-daemon
 

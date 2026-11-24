@@ -29,6 +29,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
@@ -55,6 +56,7 @@ import java.time.LocalDate
 // ---------------- Farben (helles Design wie Vorlage) ----------------
 
 private val BG = ColorProvider(Color(0xFFFFFFFF))
+private val BG_SOFT = ColorProvider(Color(0xFFEEF1F5))
 private val TITLE = ColorProvider(Color(0xFF2C3E50))
 private val LABEL = ColorProvider(Color(0xFF7B8794))
 private val VALUE = ColorProvider(Color(0xFF111418))
@@ -135,40 +137,52 @@ class PvWidget : CacheWidget() {
     @Composable
     override fun Content(s: PvSnapshot) {
         val size = LocalSize.current
-        val colW = (size.width - 28.dp - 16.dp) / 2
-        val curve = s.todayCurve()
+        val density = LocalContext.current.resources.displayMetrics.density
         val v = s.values
-        Card {
-            Header(s, refresh = true)
-            Spacer(GlanceModifier.height(10.dp))
-            Row(GlanceModifier.fillMaxWidth()) {
-                Tile("PV jetzt", Format.power(v?.pvPowerW))
-                Tile("Haus jetzt", Format.power(v?.loadPowerW))
-                Tile("Netz", Format.gridShort(v?.gridPowerW))
-                Tile("Batterie", Format.percent(v?.batterySocPct))
-            }
+        val flowW = size.width - 20.dp
+        val flowH = size.height * 0.55f
+        val flow = EnergyFlowGraphic.render(
+            EnergyFlowGraphic.Values(v?.pvPowerW, v?.loadPowerW, v?.batteryPowerW, v?.batterySocPct, v?.gridPowerW),
+            (flowW.value * density).toInt(), (flowH.value * density).toInt(), density,
+        )
+        Column(
+            modifier = GlanceModifier.fillMaxSize().background(BG_SOFT).cornerRadius(20.dp).padding(10.dp)
+                .clickable(actionStartActivity<MainActivity>()),
+        ) {
+            Box(GlanceModifier.padding(horizontal = 4.dp)) { Header(s, refresh = true) }
+            Image(
+                provider = ImageProvider(flow),
+                contentDescription = "Energiefluss",
+                modifier = GlanceModifier.fillMaxWidth().height(flowH),
+            )
             Spacer(GlanceModifier.defaultWeight())
             Row(GlanceModifier.fillMaxWidth()) {
-                Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.pv, colW, 56.dp, WidgetGraphics.ORANGE, fill = true, fullDay = true)
-                    Spacer(GlanceModifier.height(4.dp))
-                    ValueBlock("Tagesertrag", v?.dailyYieldKwh, 20.sp)
-                }
-                Spacer(GlanceModifier.width(16.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Curve(curve.load, colW, 56.dp, WidgetGraphics.BLUE, fill = false, fullDay = true)
-                    Spacer(GlanceModifier.height(4.dp))
-                    ValueBlock("Tagesverbrauch", v?.consumptionTodayKwh, 20.sp)
-                }
+                KwhTile("PV-Erzeugung", v?.dailyYieldKwh)
+                Spacer(GlanceModifier.width(6.dp))
+                KwhTile("Hausverbrauch", v?.consumptionTodayKwh)
+                Spacer(GlanceModifier.width(6.dp))
+                KwhTile("Netzbezug", v?.gridBuyTodayKwh)
             }
-            Spacer(GlanceModifier.height(10.dp))
+            Spacer(GlanceModifier.height(6.dp))
             Row(GlanceModifier.fillMaxWidth()) {
-                Tile("Netzbezug", Format.kwh(v?.gridBuyTodayKwh))
-                Tile("Eingespeist", Format.kwh(v?.feedInTodayKwh))
-                Tile("Batt. geladen", Format.kwh(v?.batteryChargeTodayKwh))
-                Tile("Batt. entladen", Format.kwh(v?.batteryDischargeTodayKwh))
+                KwhTile("Batt. geladen", v?.batteryChargeTodayKwh)
+                Spacer(GlanceModifier.width(6.dp))
+                KwhTile("Batt. entladen", v?.batteryDischargeTodayKwh)
+                Spacer(GlanceModifier.width(6.dp))
+                KwhTile("Eingespeist", v?.feedInTodayKwh)
             }
         }
+    }
+}
+
+@Composable
+private fun androidx.glance.layout.RowScope.KwhTile(label: String, kwh: Double?) {
+    Column(GlanceModifier.defaultWeight().background(BG).cornerRadius(12.dp).padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(Format.number1(kwh), style = TextStyle(color = VALUE, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(" kWh", style = TextStyle(color = VALUE, fontSize = 10.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = 2.dp))
+        }
+        Text(label, style = TextStyle(color = LABEL, fontSize = 11.sp), maxLines = 1)
     }
 }
 
@@ -226,14 +240,6 @@ private fun ValueBlock(label: String, kwh: Double?, size: TextUnit) {
             Text(Format.number(kwh), style = TextStyle(color = VALUE, fontSize = size, fontWeight = FontWeight.Bold))
             Text(" kWh", style = TextStyle(color = VALUE, fontSize = 13.sp), modifier = GlanceModifier.padding(bottom = 3.dp))
         }
-    }
-}
-
-@Composable
-private fun androidx.glance.layout.RowScope.Tile(label: String, value: String) {
-    Column(GlanceModifier.defaultWeight()) {
-        Text(label, style = TextStyle(color = LABEL, fontSize = 11.sp), maxLines = 1)
-        Text(value, style = TextStyle(color = VALUE, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
     }
 }
 

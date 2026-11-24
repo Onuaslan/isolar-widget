@@ -23,6 +23,8 @@ object Format {
     /** Zahl ohne Einheit, z. B. "5,43". */
     fun number(k: Double?): String = k?.let { String.format(Locale.GERMANY, "%.2f", it) } ?: "–"
 
+    fun number1(k: Double?): String = k?.let { String.format(Locale.GERMANY, "%.1f", it) } ?: "–"
+
     /** Kurzform fürs Widget: "+1,2 kW" (Bezug) / "−800 W" (Einspeisung). */
     fun gridShort(w: Double?): String = when {
         w == null -> "–"

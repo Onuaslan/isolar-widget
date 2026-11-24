@@ -9,6 +9,8 @@ data class PvValues(
     /** Positiv = Netzbezug, negativ = Einspeisung. */
     val gridPowerW: Double?,
     val dailyYieldKwh: Double?,
+    /** Batterieleistung (W): + laden, − entladen. */
+    val batteryPowerW: Double? = null,
     /** Aktuelle Hauslast (W). */
     val loadPowerW: Double? = null,
     /** Tageswerte in kWh. */

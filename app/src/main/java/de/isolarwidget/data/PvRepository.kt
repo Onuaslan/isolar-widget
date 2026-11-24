@@ -100,8 +100,14 @@ class PvRepository private constructor(context: Context) {
                     put("is_get_point_dict", "0")
                 }).unwrap().resultData()
                 val values = RealtimeParser.parse(data, plantId, false)
-                val grid = values.gridPowerW ?: deviceGrid(api, bearer, plantId)
-                values.copy(gridPowerW = grid?.let { if (store.invertGridSign) -it else it })
+                val (devGrid, devBatt) = deviceData(api, bearer, plantId)
+                val grid = (values.gridPowerW ?: devGrid)?.let { if (store.invertGridSign) -it else it }
+                // Fallback Energiebilanz: PV + Netz = Haus + Batterie(laden)
+                val batt = devBatt ?: run {
+                    val pv = values.pvPowerW; val load = values.loadPowerW
+                    if (grid != null && pv != null && load != null) pv + grid - load else null
+                }
+                values.copy(gridPowerW = grid, batteryPowerW = batt)
             }
         }
         val curve = if (result.isSuccess && plantId != null) loadCurve(plantId) else null
@@ -169,13 +175,14 @@ class PvRepository private constructor(context: Context) {
             if (dict) put("is_get_point_dict", "1")
         }).unwrap().resultData()
 
-    /** Netzleistung aus Gerätedaten; null, wenn nicht verfügbar (dann zeigt das Widget "–"). */
-    private suspend fun deviceGrid(api: IsolarApi, bearer: String, plantId: String): Double? = runCatching {
+    /** Netz- und Batterieleistung aus Gerätedaten; null-Werte, wenn nicht verfügbar. */
+    private suspend fun deviceData(api: IsolarApi, bearer: String, plantId: String): Pair<Double?, Double?> = runCatching {
         val cachedKey = store.deviceKey
         val device = if (cachedKey != null) Device(cachedKey, store.deviceType, "")
         else pickDevice(devices(api, bearer, plantId))?.also { store.deviceKey = it.psKey; store.deviceType = it.type }
-        device?.let { RealtimeParser.parseDeviceGrid(deviceRealtime(api, bearer, it, RealtimeParser.DEVICE_POINTS, false)) }
-    }.onFailure { if (it is AuthException) throw it }.getOrNull()
+        device?.let { RealtimeParser.parseDevice(deviceRealtime(api, bearer, it, RealtimeParser.DEVICE_POINTS, false)) }
+            ?: (null to null)
+    }.onFailure { if (it is AuthException) throw it }.getOrElse { null to null }
 
     /**
      * Diagnose: fragt alle bekannten Messpunkte ab und liefert die, für die die Anlage Werte hat,
