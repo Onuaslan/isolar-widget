@@ -37,6 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -158,6 +161,12 @@ class MainActivity : ComponentActivity() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Netz-Vorzeichen umkehren", Modifier.weight(1f))
                         Switch(checked = ui.invertGridSign, onCheckedChange = vm::setInvertGrid)
+                    }
+                    OutlinedButton(onClick = { vm.runDiagnostics() }, enabled = !ui.busy) { Text("Messpunkte anzeigen (Diagnose)") }
+                    ui.diagnostics?.let { d ->
+                        val clipboard = LocalClipboardManager.current
+                        TextButton(onClick = { clipboard.setText(AnnotatedString(d)) }) { Text("Diagnose kopieren") }
+                        SelectionContainer { Text(d, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }

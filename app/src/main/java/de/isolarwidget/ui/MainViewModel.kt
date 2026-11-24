@@ -31,6 +31,7 @@ data class UiState(
     val invertGridSign: Boolean,
     val busy: Boolean = false,
     val message: String? = null,
+    val diagnostics: String? = null,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -109,6 +110,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.store.invertGridSign = value
         _ui.update { it.copy(invertGridSign = value) }
         syncNow()
+    }
+
+    fun runDiagnostics() = viewModelScope.launch {
+        _ui.update { it.copy(busy = true, diagnostics = null) }
+        val text = repo.diagnose()
+        _ui.update { it.copy(busy = false, diagnostics = text) }
     }
 
     fun syncNow() = viewModelScope.launch {

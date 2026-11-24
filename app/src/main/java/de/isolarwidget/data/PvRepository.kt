@@ -105,6 +105,34 @@ class PvRepository private constructor(context: Context) {
         return result
     }
 
+    /**
+     * Diagnose: fragt alle bekannten Messpunkte ab und liefert die, für die die Anlage Werte hat,
+     * als lesbaren Text ("p83067 Name = 2450 W").
+     */
+    suspend fun diagnose(): String {
+        val plantId = store.plantId ?: return "Keine Anlage ausgewählt"
+        return runCatching {
+            authed { api, bearer ->
+                val data = api.realtimeData(store.credentials.secretKey, bearer, body {
+                    putJsonArray("ps_id_list") { add(JsonPrimitive(plantId)) }
+                    putJsonArray("point_id_list") { RealtimeParser.DIAGNOSTIC_POINTS.forEach { add(JsonPrimitive(it)) } }
+                    put("is_get_point_dict", "1")
+                }).unwrap().resultData()
+                val dict = (data["point_dict"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+                    .associateBy { it.str("point_id").orEmpty() }
+                val entry = (data["device_point_list"] as? JsonArray)?.firstOrNull() as? JsonObject
+                    ?: return@authed "Keine Daten"
+                val point = (entry["device_point"] as? JsonObject) ?: entry
+                point.keys.filter { it.startsWith("p") && it.drop(1).all(Char::isDigit) }.sorted()
+                    .mapNotNull { k ->
+                        val v = point.str(k)?.takeIf { it.isNotBlank() && it != "--" } ?: return@mapNotNull null
+                        val d = dict[k.drop(1)]
+                        "$k ${d?.str("point_name").orEmpty()} = $v ${d?.str("point_unit").orEmpty()}".trim()
+                    }.joinToString("\n").ifEmpty { "Keine Messpunkte mit Werten" }
+            }
+        }.getOrElse { describe(it) }
+    }
+
     /** Führt einen Aufruf aus; bei Auth-Fehler genau einmal Token erneuern und wiederholen. */
     private suspend fun <T> authed(block: suspend (IsolarApi, String) -> T): T {
         val api = ApiClient.forRegion(store.credentials.region)
