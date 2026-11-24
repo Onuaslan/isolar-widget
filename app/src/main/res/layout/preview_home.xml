@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:background="@drawable/preview_card">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="Mein Zuhause" android:textSize="13sp" android:textColor="#FF2C3E50" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="▮▮▮▯" android:textSize="11sp" android:textColor="#FF2ECC71" />
+    </LinearLayout>
+    <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Tagesertrag" android:textSize="14sp" android:textColor="#FF7B8794" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="10,90 kWh" android:textSize="22sp" android:textColor="#FF111418" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Tagesverbrauch" android:textSize="14sp" android:textColor="#FF7B8794" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="15,10 kWh" android:textSize="22sp" android:textColor="#FF111418" android:textStyle="bold" />
+</LinearLayout>

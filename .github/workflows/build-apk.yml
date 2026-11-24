@@ -34,6 +34,16 @@ jobs:
           path: app/build/previews/
           if-no-files-found: ignore
 
+      - name: Vorschau in Branch "previews" ablegen
+        if: always()
+        run: |
+          [ -d app/build/previews ] || exit 0
+          cd app/build/previews
+          git init -q && git checkout -q -b previews
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Vorschau ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" previews
+
       - name: Debug-APK bauen
         run: gradle :app:assembleDebug --no-daemon
 

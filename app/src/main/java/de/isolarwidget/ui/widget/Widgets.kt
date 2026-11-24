@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,8 +93,17 @@ abstract class CacheWidget : GlanceAppWidget() {
 class SmallWidget : CacheWidget() {
     @Composable
     override fun Content(s: PvSnapshot) {
+        val size = LocalSize.current
+        val tall = size.height >= 170.dp
+        val curve = s.todayCurve()
         Card {
             Header(s, refresh = false)
+            if (tall) {
+                Spacer(GlanceModifier.height(8.dp))
+                Curve(curve.pv, size.width - 28.dp, 40.dp, WidgetGraphics.ORANGE, fill = true)
+                Spacer(GlanceModifier.height(4.dp))
+                Curve(curve.load, size.width - 28.dp, 32.dp, WidgetGraphics.BLUE, fill = false)
+            }
             Spacer(GlanceModifier.defaultWeight())
             ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, 24.sp)
             Spacer(GlanceModifier.height(8.dp))
@@ -140,7 +150,9 @@ class PvWidget : CacheWidget() {
         val density = LocalContext.current.resources.displayMetrics.density
         val v = s.values
         val flowW = size.width - 20.dp
-        val flowH = size.height * 0.55f
+        val twoRows = size.height >= 280.dp
+        // Header ~28dp, Kachelreihe ~46dp, Abstände/Padding ~28dp
+        val flowH = (size.height - 28.dp - 28.dp - (if (twoRows) 98.dp else 46.dp)).coerceAtLeast(90.dp)
         val flow = EnergyFlowGraphic.render(
             EnergyFlowGraphic.Values(v?.pvPowerW, v?.loadPowerW, v?.batteryPowerW, v?.batterySocPct, v?.gridPowerW),
             (flowW.value * density).toInt(), (flowH.value * density).toInt(), density,
@@ -163,8 +175,8 @@ class PvWidget : CacheWidget() {
                 Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Netzbezug", v?.gridBuyTodayKwh)
             }
-            Spacer(GlanceModifier.height(6.dp))
-            Row(GlanceModifier.fillMaxWidth()) {
+            if (twoRows) Spacer(GlanceModifier.height(6.dp))
+            if (twoRows) Row(GlanceModifier.fillMaxWidth()) {
                 KwhTile("Batt. geladen", v?.batteryChargeTodayKwh)
                 Spacer(GlanceModifier.width(6.dp))
                 KwhTile("Batt. entladen", v?.batteryDischargeTodayKwh)
@@ -278,4 +290,13 @@ class SmallWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class WideWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = WideWidget()
+}
+
+/** Gleiche Widgets in weiteren Startgrößen, damit der Launcher sie getrennt anbietet. */
+class SmallTallWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = SmallWidget()
+}
+
+class PvMediumWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = PvWidget()
 }

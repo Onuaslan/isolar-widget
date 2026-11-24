@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:background="@drawable/preview_card_soft">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:text="Mein Zuhause" android:textSize="13sp" android:textColor="#FF2C3E50" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="▮▮▮▯" android:textSize="11sp" android:textColor="#FF2ECC71" />
+    </LinearLayout>
+    <ImageView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:src="@drawable/preview_flow" android:scaleType="fitCenter" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_margin="3dp" android:padding="6dp" android:background="@drawable/preview_card">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="10,9 kWh" android:textSize="15sp" android:textStyle="bold" android:textColor="#FF111418" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PV-Erzeugung" android:textSize="11sp" android:textColor="#FF7B8794" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_margin="3dp" android:padding="6dp" android:background="@drawable/preview_card">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="15,1 kWh" android:textSize="15sp" android:textStyle="bold" android:textColor="#FF111418" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hausverbrauch" android:textSize="11sp" android:textColor="#FF7B8794" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_margin="3dp" android:padding="6dp" android:background="@drawable/preview_card">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="8,1 kWh" android:textSize="15sp" android:textStyle="bold" android:textColor="#FF111418" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Netzbezug" android:textSize="11sp" android:textColor="#FF7B8794" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
