@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PV-Widget</string>
-    <string name="widget_description">PV-Leistung, Batterie, Netz und Tagesertrag aus iSolarCloud</string>
+    <string name="widget_description">Alle Werte: PV, Haus, Netz, Batterie, Tageskurven und Tageswerte</string>
+    <string name="widget_small_description">Mein Zuhause: Tagesertrag, Tagesverbrauch, Batterie</string>
+    <string name="widget_wide_description">Mein Zuhause mit Tageskurven für Ertrag und Verbrauch</string>
 </resources>

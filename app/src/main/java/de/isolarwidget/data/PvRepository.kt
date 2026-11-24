@@ -13,6 +13,7 @@ import de.isolarwidget.data.auth.AppCredentials
 import de.isolarwidget.data.auth.CredentialStore
 import de.isolarwidget.data.auth.OAuth
 import de.isolarwidget.data.auth.TokenManager
+import de.isolarwidget.data.cache.DayCurve
 import de.isolarwidget.data.cache.PvCache
 import de.isolarwidget.data.cache.PvValues
 import kotlinx.serialization.SerializationException
@@ -103,10 +104,43 @@ class PvRepository private constructor(context: Context) {
                 values.copy(gridPowerW = grid?.let { if (store.invertGridSign) -it else it })
             }
         }
-        result.onSuccess { cache.saveSuccess(it) }
+        val curve = if (result.isSuccess && plantId != null) loadCurve(plantId) else null
+        result.onSuccess { cache.saveSuccess(it, curve) }
             .onFailure { cache.saveFailure(describe(it)) }
         return result
     }
+
+    // ---------- Tageskurve ----------
+
+    /**
+     * Lädt PV-Leistung und Hauslast von 0 Uhr bis jetzt in 15-Minuten-Schritten.
+     * Die API begrenzt evtl. den Zeitraum pro Anfrage, daher in 3-Stunden-Fenstern.
+     * Fehler sind nicht fatal: dann bleibt die alte Kurve stehen (Rückgabe null).
+     */
+    private suspend fun loadCurve(plantId: String): DayCurve? = runCatching {
+        val zone = java.time.ZoneId.systemDefault()
+        val now = java.time.LocalDateTime.now(zone)
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+        val pv = arrayOfNulls<Float>(DayCurve.SLOTS)
+        val load = arrayOfNulls<Float>(DayCurve.SLOTS)
+        var start = now.toLocalDate().atStartOfDay()
+        authed { api, bearer ->
+            while (start.isBefore(now)) {
+                val end = minOf(start.plusHours(3), now)
+                val data = api.minuteData(store.credentials.secretKey, bearer, body {
+                    putJsonArray("ps_id_list") { add(JsonPrimitive(plantId)) }
+                    put("points", "p${RealtimeParser.CURVE_PV},p${RealtimeParser.CURVE_LOAD}")
+                    put("start_time_stamp", start.format(fmt))
+                    put("end_time_stamp", end.format(fmt))
+                    put("minute_interval", "15")
+                    put("is_get_point_dict", "0")
+                }).unwrap().resultData()
+                RealtimeParser.parseCurveInto(data, pv, load)
+                start = end
+            }
+        }
+        DayCurve(now.toLocalDate().toString(), pv.toList(), load.toList())
+    }.onFailure { android.util.Log.w("PvRepository", "Kurve nicht geladen", it) }.getOrNull()
 
     // ---------- Geräteebene (Netzleistung) ----------
 

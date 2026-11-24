@@ -53,4 +53,11 @@ interface IsolarApi {
         @Header("Authorization") bearer: String,
         @Body body: JsonObject,
     ): Response<JsonObject>
+
+    @POST("openapi/platform/getPowerStationPointMinuteDataList")
+    suspend fun minuteData(
+        @Header("x-access-key") accessKey: String,
+        @Header("Authorization") bearer: String,
+        @Body body: JsonObject,
+    ): Response<JsonObject>
 }

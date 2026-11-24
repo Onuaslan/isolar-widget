@@ -32,6 +32,31 @@
         </activity>
 
         <receiver
+            android:name=".ui.widget.SmallWidgetReceiver"
+            android:exported="true"
+            android:label="Mein Zuhause (klein)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+
+        <receiver
+            android:name=".ui.widget.WideWidgetReceiver"
+            android:exported="true"
+            android:label="Mein Zuhause (Kurven)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_wide_info" />
+        </receiver>
+
+        <receiver
+            android:label="PV-Übersicht (groß)"
             android:name=".ui.widget.PvWidgetReceiver"
             android:exported="true">
             <intent-filter>

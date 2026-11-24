@@ -1,11 +1,10 @@
 package de.isolarwidget.worker
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import de.isolarwidget.data.PvRepository
-import de.isolarwidget.ui.widget.PvWidget
+import de.isolarwidget.ui.widget.Widgets
 
 /**
  * Holt die Werte, schreibt den Cache und rendert danach das Widget neu.
@@ -21,7 +20,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             repo.sync()
         } finally {
             repo.cache.setSyncing(false)
-            PvWidget().updateAll(applicationContext)
+            Widgets.updateAll(applicationContext)
         }
         return Result.success()
     }

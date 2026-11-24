@@ -9,9 +9,8 @@ import de.isolarwidget.data.PvRepository
 import de.isolarwidget.data.api.Region
 import de.isolarwidget.data.auth.AppCredentials
 import de.isolarwidget.data.cache.PvSnapshot
-import de.isolarwidget.ui.widget.PvWidget
+import de.isolarwidget.ui.widget.Widgets
 import de.isolarwidget.worker.SyncScheduler
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -120,7 +119,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun syncNow() = viewModelScope.launch {
         repo.cache.setSyncing(true)
-        PvWidget().updateAll(getApplication())
+        Widgets.updateAll(getApplication())
         SyncScheduler.syncNow(getApplication())
     }
 
@@ -128,7 +127,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.logout()
         SyncScheduler.cancelAll(getApplication())
         repo.cache.clear()
-        PvWidget().updateAll(getApplication())
+        Widgets.updateAll(getApplication())
         _ui.value = initialState().copy(message = "Abgemeldet")
     }
 }
