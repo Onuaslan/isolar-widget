@@ -73,7 +73,7 @@ object EnergyFlowGraphic {
         val eaveX = hx0 - 10 * d; val eaveY = wallTop + 2 * d
         fun roofPt(t: Float) = (midX + (eaveX - midX) * t) to (roofPeak + (eaveY - roofPeak) * t)
         // Modulfeld: Parallelogramm mit Kanten parallel zur linken Dachschräge, waagrecht oben/unten
-        val s1 = 9 * d; val s2 = s1 + (midX - hx0) * 0.55f
+        val s1 = 9 * d; val s2 = s1 + (midX - hx0) * 0.45f
         val t0 = 0.30f; val t1 = 0.86f
         fun lp(t: Float, shift: Float) = roofPt(t).let { (x, y) -> (x + shift) to y }
         val panel = Path().apply {
