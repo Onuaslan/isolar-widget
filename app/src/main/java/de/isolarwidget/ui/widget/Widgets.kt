@@ -144,30 +144,30 @@ private fun Card(content: @Composable ColumnScope.() -> Unit) {
 }
 
 /**
- * Titel links, Batterie rechts – wie Vorlage. Die Uhrzeit erscheint nur, wenn der Stand veraltet ist.
- * Tipp auf die Batterie startet eine Aktualisierung.
+ * Titel links, Batterie rechts – wie Vorlage. Der Titel bekommt das Gewicht, damit die Batterie
+ * nie abgeschnitten wird. Tipp auf die Batterie startet eine Aktualisierung.
  */
 @Composable
 private fun Header(s: PvSnapshot) {
     val density = LocalContext.current.resources.displayMetrics.density
-    val outdated = s.isOutdated() && !s.syncing
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Mein Zuhause", style = TextStyle(color = TITLE, fontSize = 13.sp), maxLines = 1)
-        Spacer(GlanceModifier.width(6.dp))
         Text(
-            when {
-                s.syncing -> "…"
-                outdated -> "Stand ${Format.time(s.lastUpdatedEpochMs)}"
-                else -> ""
-            },
-            style = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp),
-            maxLines = 1,
+            "Mein Zuhause", style = TextStyle(color = TITLE, fontSize = 13.sp), maxLines = 1,
             modifier = GlanceModifier.defaultWeight(),
         )
+        Spacer(GlanceModifier.width(6.dp))
         Image(
             provider = ImageProvider(WidgetGraphics.battery(s.values?.batterySocPct, (22 * density).toInt(), (12 * density).toInt())),
             contentDescription = "Batterie ${Format.percent(s.values?.batterySocPct)}, tippen zum Aktualisieren",
             modifier = GlanceModifier.size(22.dp, 12.dp).clickable(actionRunCallback<RefreshAction>()),
+        )
+    }
+    // Nur bei veraltetem Stand bzw. während der Aktualisierung eine kleine Zeile
+    val outdated = s.isOutdated() && !s.syncing
+    if (s.syncing || outdated) {
+        Text(
+            if (s.syncing) "Aktualisiere…" else "Stand ${Format.time(s.lastUpdatedEpochMs)}",
+            style = TextStyle(color = if (outdated) WARN else LABEL, fontSize = 11.sp), maxLines = 1,
         )
     }
 }
