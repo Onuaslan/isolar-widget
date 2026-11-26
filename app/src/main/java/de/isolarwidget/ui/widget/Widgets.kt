@@ -28,6 +28,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.ContentScale
@@ -96,7 +97,9 @@ class SmallWidget : CacheWidget() {
             Spacer(GlanceModifier.defaultWeight())
             ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, if (c) 18.sp else 23.sp, c)
             Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
-            ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
+            BottomRow(s, c) {
+                ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
+            }
         }
     }
 }
@@ -132,7 +135,9 @@ class WideWidget : CacheWidget() {
                         Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
                         Spacer(GlanceModifier.height(gap))
                     }
-                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    BottomRow(s, c) {
+                        ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    }
                 }
             }
         }
@@ -166,7 +171,7 @@ private fun Card(compact: Boolean, content: @Composable ColumnScope.() -> Unit) 
 
 /**
  * Titel links, Batterie rechts – wie Vorlage. Der Titel bekommt das Gewicht, damit die Batterie
- * nie abgeschnitten wird. Tipp auf die Batterie startet eine Aktualisierung.
+ * nie abgeschnitten wird. Der Aktualisieren-Knopf sitzt rechts unten (siehe [BottomRow]).
  */
 @Composable
 private fun Header(s: PvSnapshot, compact: Boolean) {
@@ -189,13 +194,6 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
             Text("  $stand", style = standStyle, maxLines = 1, modifier = GlanceModifier.defaultWeight())
         }
         Spacer(GlanceModifier.width(6.dp))
-        // Sichtbarer Aktualisieren-Knopf links neben der Batterie (grau während der Aktualisierung)
-        Image(
-            provider = ImageProvider(WidgetGraphics.refresh((16 * density).toInt(), if (s.syncing) 0xFFC8CCD0.toInt() else 0xFF8E9399.toInt())),
-            contentDescription = "Aktualisieren",
-            modifier = GlanceModifier.size(16.dp).clickable(actionRunCallback<RefreshAction>()),
-        )
-        Spacer(GlanceModifier.width(10.dp))
         Image(
             provider = ImageProvider(WidgetGraphics.battery(s.values?.batterySocPct, (22 * density).toInt(), (12 * density).toInt())),
             contentDescription = "Batterie ${Format.percent(s.values?.batterySocPct)}, tippen zum Aktualisieren",
@@ -203,6 +201,37 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
         )
     }
     if (!compact) Text(stand, style = standStyle, maxLines = 1)
+}
+
+/**
+ * Unterste Zeile: Inhalt links, dezenter Aktualisieren-Knopf rechts unten in der Ecke.
+ * Die Tippfläche ist größer als das Symbol, damit man ihn gut trifft; während der
+ * Aktualisierung wird das Symbol heller.
+ */
+@Composable
+private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -> Unit) {
+    val density = LocalContext.current.resources.displayMetrics.density
+    val icon = if (compact) 16.dp else 18.dp
+    val touch = if (compact) 24.dp else 28.dp
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Box(GlanceModifier.defaultWeight()) { content() }
+        Box(
+            modifier = GlanceModifier.size(touch).cornerRadius(touch / 2)
+                .clickable(actionRunCallback<RefreshAction>()),
+            contentAlignment = Alignment.BottomEnd,
+        ) {
+            Image(
+                provider = ImageProvider(
+                    WidgetGraphics.refresh(
+                        (icon.value * density).toInt(),
+                        if (s.syncing) 0xFFC8CCD0.toInt() else 0xFF8E9399.toInt(),
+                    ),
+                ),
+                contentDescription = "Aktualisieren",
+                modifier = GlanceModifier.size(icon),
+            )
+        }
+    }
 }
 
 @Composable
