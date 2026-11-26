@@ -38,6 +38,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
+import androidx.glance.layout.RowScope
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
@@ -280,7 +281,7 @@ private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.un
  * darunter der Tagesverlauf 0–24 Uhr, der die restliche Höhe füllt.
  */
 @Composable
-private fun CurveColumn(
+private fun RowScope.CurveColumn(
     values: List<Float?>, nowW: Double?, width: Dp, height: Dp, color: Int, fill: Boolean, labels: Boolean,
 ) {
     val density = LocalContext.current.resources.displayMetrics.density
