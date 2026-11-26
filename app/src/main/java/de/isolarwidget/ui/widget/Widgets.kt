@@ -256,7 +256,9 @@ private fun RefreshIcon(s: PvSnapshot, icon: Dp, touch: Dp, density: Float) {
         Box(
             modifier = GlanceModifier.size(touch).cornerRadius(touch / 2)
                 .clickable(actionRunCallback<RefreshAction>()),
-            contentAlignment = Alignment.BottomEnd,
+            // Mittig statt unten bündig: Ist das Widget minimal zu niedrig (z. B. aufgeklapptes
+            // Foldable), schneidet die Karte die unterste Kante ab – dort liegt dann nur Leerraum.
+            contentAlignment = Alignment.Center,
         ) {
             Image(
                 provider = ImageProvider(
