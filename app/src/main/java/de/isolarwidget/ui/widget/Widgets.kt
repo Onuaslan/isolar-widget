@@ -110,7 +110,7 @@ class SmallWidget : CacheWidget() {
 
 /** „Mein Zuhause“ 4×2: je eine Mini-Kurve über Tagesertrag (orange) und Tagesverbrauch (blau). */
 class WideWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(250.dp, 60.dp), DpSize(250.dp, WIDE_NO_CURVE), DpSize(250.dp, WIDE_FULL))
+    override val breakpoints = setOf(DpSize(250.dp, 40.dp), DpSize(250.dp, WIDE_NO_CURVE), DpSize(250.dp, WIDE_FULL))
 
     @Composable
     override fun Content(s: PvSnapshot) {
