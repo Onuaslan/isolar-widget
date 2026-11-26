@@ -105,7 +105,7 @@ class SmallWidget : CacheWidget() {
             Spacer(GlanceModifier.defaultWeight())
             ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, if (c) 18.sp else 23.sp, c)
             Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
-            WithRefresh(s, c) {
+            WithRefresh(s, c, overlay = false) {
                 ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
             }
         }
@@ -134,13 +134,13 @@ class WideWidget : CacheWidget() {
         Card(c) {
             Header(s, c)
             if (showCurve) {
-                Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
+                Spacer(GlanceModifier.height(if (c) 4.dp else 8.dp))
                 Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
                     CurveColumn(curve.pv, s.values?.pvPowerW, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = !c)
                     Spacer(GlanceModifier.width(COL_GAP))
                     CurveColumn(curve.load, s.values?.loadPowerW, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = !c)
                 }
-                Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
+                Spacer(GlanceModifier.height(if (c) 4.dp else 8.dp))
             } else {
                 Spacer(GlanceModifier.defaultWeight())
             }
@@ -234,33 +234,47 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
 }
 
 /**
- * Legt den runden Aktualisieren-Knopf rechts unten über den Inhalt (wie beim LWP-Widget),
- * damit die Beschriftungen die volle Breite behalten und nicht abgeschnitten werden.
- * Während der Aktualisierung wird das Symbol heller.
+ * Runder Aktualisieren-Knopf rechts unten (wie beim LWP-Widget).
+ * [overlay] = true: liegt über dem Inhalt, damit die Beschriftungen die volle Breite behalten
+ * (4×2). Sonst steht er rechts neben dem Inhalt (2×2, dort ist zu wenig Breite zum Überlagern).
  */
 @Composable
-private fun WithRefresh(s: PvSnapshot, compact: Boolean, content: @Composable () -> Unit) {
-    val density = LocalContext.current.resources.displayMetrics.density
-    val icon = if (compact) 14.dp else 17.dp
-    val touch = if (compact) 26.dp else 32.dp
-    Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.BottomEnd) {
-        content()
-        Box(
-            modifier = GlanceModifier.size(touch).cornerRadius(touch / 2).background(BUTTON_BG)
-                .clickable(actionRunCallback<RefreshAction>()),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                provider = ImageProvider(
-                    WidgetGraphics.refresh(
-                        (icon.value * density).toInt(),
-                        if (s.syncing) 0xFFB8BDC3.toInt() else 0xFF3A4048.toInt(),
-                    ),
-                ),
-                contentDescription = "Aktualisieren",
-                modifier = GlanceModifier.size(icon),
-            )
+private fun WithRefresh(s: PvSnapshot, compact: Boolean, overlay: Boolean = true, content: @Composable () -> Unit) {
+    if (overlay) {
+        Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.BottomEnd) {
+            Box(GlanceModifier.fillMaxWidth()) { content() }
+            RefreshButton(s, compact)
         }
+    } else {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Box(GlanceModifier.defaultWeight()) { content() }
+            Spacer(GlanceModifier.width(4.dp))
+            RefreshButton(s, compact)
+        }
+    }
+}
+
+/** Während der Aktualisierung wird das Symbol heller. */
+@Composable
+private fun RefreshButton(s: PvSnapshot, compact: Boolean) {
+    val density = LocalContext.current.resources.displayMetrics.density
+    val icon = if (compact) 14.dp else 16.dp
+    val touch = if (compact) 26.dp else 30.dp
+    Box(
+        modifier = GlanceModifier.size(touch).cornerRadius(touch / 2).background(BUTTON_BG)
+            .clickable(actionRunCallback<RefreshAction>()),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            provider = ImageProvider(
+                WidgetGraphics.refresh(
+                    (icon.value * density).toInt(),
+                    if (s.syncing) 0xFFB8BDC3.toInt() else 0xFF3A4048.toInt(),
+                ),
+            ),
+            contentDescription = "Aktualisieren",
+            modifier = GlanceModifier.size(icon),
+        )
     }
 }
 
@@ -300,7 +314,7 @@ private fun RowScope.CurveColumn(
                     Text("max ${WidgetGraphics.watt(peak)}", style = TextStyle(color = LABEL, fontSize = 11.sp), maxLines = 1)
                 }
             }
-            Spacer(GlanceModifier.height(4.dp))
+            Spacer(GlanceModifier.height(3.dp))
         }
         val bmp = WidgetGraphics.sparkline(
             values, (width.value * density).toInt(), (height.value * density).toInt(), color, fill,
