@@ -33,10 +33,10 @@ class WidgetPreviewTest {
         save("refresh.png", WidgetGraphics.refresh(96, 0xFF8E9399.toInt()))
         save("spark_pv_left.png", WidgetGraphics.sparkline(pv, 450, 100, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f))
         save("spark_load_left.png", WidgetGraphics.sparkline(load, 450, 100, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f))
-        // Mit Wattangaben (Maßstab ~2,75 px/dp wie typisches Handy, Spalte ~100 dp × 36 dp)
-        save("spark_pv_watt.png", WidgetGraphics.sparkline(pv, 275, 99, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 27.5f))
-        save("spark_load_watt.png", WidgetGraphics.sparkline(load, 275, 99, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 27.5f))
-        val pvNow = List(96) { i -> if (i in 30..50) (Math.sin((i - 30) / 36.0 * Math.PI) * 3000).toFloat() else null }
-        save("spark_pv_watt_mittag.png", WidgetGraphics.sparkline(pvNow, 275, 99, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 27.5f))
+        // Tagesverlauf 0–24 Uhr mit Punkt am Ende (Stand ca. 13 Uhr), ~150 × 50 dp bei 2,75 px/dp
+        val pvDay = List(96) { i -> if (i in 0..52) (if (i in 30..66) Math.sin((i - 30) / 36.0 * Math.PI) * 3000 else 0.0).toFloat() else null }
+        val loadDay = List(96) { i -> if (i <= 52) (400 + 300 * Math.sin(i / 6.0) + if (i in 40..43) 5000 else 0).toFloat() else null }
+        save("spark_pv_day.png", WidgetGraphics.sparkline(pvDay, 412, 137, WidgetGraphics.ORANGE, fill = true, fullDay = true, strokePx = 5.5f, endDot = true))
+        save("spark_load_day.png", WidgetGraphics.sparkline(loadDay, 412, 137, WidgetGraphics.BLUE, fill = false, fullDay = true, strokePx = 5.5f, endDot = true))
     }
 }

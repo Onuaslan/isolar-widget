@@ -29,7 +29,7 @@ jobs:
       # Grafik-Vorschau (Robolectric lädt dafür Android-Jars nach) – darf den APK-Build nicht blockieren
       - name: Grafik-Vorschau rendern
         continue-on-error: true
-        run: gradle :app:testDebugUnitTest --no-daemon --tests 'de.isolarwidget.WidgetPreviewTest'
+        run: gradle :app:testDebugUnitTest --no-daemon --tests 'de.isolarwidget.Widget*'
 
       - name: Grafik-Vorschau hochladen
         if: always()
