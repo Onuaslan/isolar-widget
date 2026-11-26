@@ -69,4 +69,5 @@ dependencies {
     implementation(libs.androidx.browser)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }

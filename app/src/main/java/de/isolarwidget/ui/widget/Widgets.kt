@@ -1,6 +1,8 @@
 package de.isolarwidget.ui.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,6 +22,7 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.LocalAppWidgetOptions
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -28,6 +31,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.ContentScale
@@ -96,7 +100,9 @@ class SmallWidget : CacheWidget() {
             Spacer(GlanceModifier.defaultWeight())
             ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, if (c) 18.sp else 23.sp, c)
             Spacer(GlanceModifier.height(if (c) 4.dp else 10.dp))
-            ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
+            BottomRow(s, c) {
+                ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, if (c) 18.sp else 23.sp, c)
+            }
         }
     }
 }
@@ -110,7 +116,7 @@ class WideWidget : CacheWidget() {
         val h = LocalSize.current.height
         val c = h < WIDE_FULL
         val showCurve = h >= WIDE_NO_CURVE
-        val colW = (LocalSize.current.width - 36.dp - 20.dp) / 2
+        val colW = (realWidth() - 36.dp - 20.dp) / 2
         val curveH = if (c) 18.dp else 36.dp
         val gap = if (c) 4.dp else 10.dp
         val valueSize = if (c) 18.sp else 22.sp
@@ -121,7 +127,7 @@ class WideWidget : CacheWidget() {
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true)
+                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = !c)
                         Spacer(GlanceModifier.height(gap))
                     }
                     ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
@@ -129,10 +135,12 @@ class WideWidget : CacheWidget() {
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
+                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = !c)
                         Spacer(GlanceModifier.height(gap))
                     }
-                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    BottomRow(s, c) {
+                        ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    }
                 }
             }
         }
@@ -151,6 +159,19 @@ private val SMALL_FULL = 172.dp
 private val WIDE_FULL = 162.dp
 private val WIDE_NO_CURVE = 100.dp
 
+/**
+ * Echte Widgetbreite aus den Launcher-Optionen (LocalSize liefert nur die Stufe, 250 dp).
+ * Damit wird die Kurve in der richtigen Breite gezeichnet und die Schrift nicht in die Breite gezogen.
+ */
+@Composable
+private fun realWidth(): Dp {
+    val o = LocalAppWidgetOptions.current
+    val landscape = LocalContext.current.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val w = o.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+    val stage = LocalSize.current.width
+    return if (w > 0) maxOf(w.dp, stage) else stage
+}
+
 private fun PvSnapshot.todayCurve(): DayCurve =
     if (curve.date == LocalDate.now().toString()) curve else DayCurve.EMPTY
 
@@ -166,7 +187,7 @@ private fun Card(compact: Boolean, content: @Composable ColumnScope.() -> Unit) 
 
 /**
  * Titel links, Batterie rechts – wie Vorlage. Der Titel bekommt das Gewicht, damit die Batterie
- * nie abgeschnitten wird. Tipp auf die Batterie startet eine Aktualisierung.
+ * nie abgeschnitten wird. Der Aktualisieren-Knopf sitzt rechts unten (siehe [BottomRow]).
  */
 @Composable
 private fun Header(s: PvSnapshot, compact: Boolean) {
@@ -189,13 +210,6 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
             Text("  $stand", style = standStyle, maxLines = 1, modifier = GlanceModifier.defaultWeight())
         }
         Spacer(GlanceModifier.width(6.dp))
-        // Sichtbarer Aktualisieren-Knopf links neben der Batterie (grau während der Aktualisierung)
-        Image(
-            provider = ImageProvider(WidgetGraphics.refresh((16 * density).toInt(), if (s.syncing) 0xFFC8CCD0.toInt() else 0xFF8E9399.toInt())),
-            contentDescription = "Aktualisieren",
-            modifier = GlanceModifier.size(16.dp).clickable(actionRunCallback<RefreshAction>()),
-        )
-        Spacer(GlanceModifier.width(10.dp))
         Image(
             provider = ImageProvider(WidgetGraphics.battery(s.values?.batterySocPct, (22 * density).toInt(), (12 * density).toInt())),
             contentDescription = "Batterie ${Format.percent(s.values?.batterySocPct)}, tippen zum Aktualisieren",
@@ -203,6 +217,37 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
         )
     }
     if (!compact) Text(stand, style = standStyle, maxLines = 1)
+}
+
+/**
+ * Unterste Zeile: Inhalt links, dezenter Aktualisieren-Knopf rechts unten in der Ecke.
+ * Die Tippfläche ist größer als das Symbol, damit man ihn gut trifft; während der
+ * Aktualisierung wird das Symbol heller.
+ */
+@Composable
+private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -> Unit) {
+    val density = LocalContext.current.resources.displayMetrics.density
+    val icon = if (compact) 16.dp else 18.dp
+    val touch = if (compact) 24.dp else 28.dp
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Box(GlanceModifier.defaultWeight()) { content() }
+        Box(
+            modifier = GlanceModifier.size(touch).cornerRadius(touch / 2)
+                .clickable(actionRunCallback<RefreshAction>()),
+            contentAlignment = Alignment.BottomEnd,
+        ) {
+            Image(
+                provider = ImageProvider(
+                    WidgetGraphics.refresh(
+                        (icon.value * density).toInt(),
+                        if (s.syncing) 0xFFC8CCD0.toInt() else 0xFF8E9399.toInt(),
+                    ),
+                ),
+                contentDescription = "Aktualisieren",
+                modifier = GlanceModifier.size(icon),
+            )
+        }
+    }
 }
 
 @Composable
@@ -217,13 +262,18 @@ private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.un
     }
 }
 
-/** Kurve im linken Teil, gestrichelte Grundlinie über die ganze Spalte – wie Vorlage. */
+/**
+ * Kurve im linken Teil, gestrichelte Grundlinie über die ganze Spalte – wie Vorlage.
+ * Mit [labels] stehen Spitzenwert und aktueller Wert in W/kW an der Kurve (wie iSolarCloud-App).
+ */
 @Composable
-private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill: Boolean) {
-    val density = LocalContext.current.resources.displayMetrics.density
+private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill: Boolean, labels: Boolean = false) {
+    val metrics = LocalContext.current.resources.displayMetrics
+    val density = metrics.density
     val bmp = WidgetGraphics.sparkline(
         values, (width.value * density).toInt(), (height.value * density).toInt(), color, fill,
         strokePx = 2f * density, curveFraction = 0.55f,
+        labelPx = if (labels) 7.5f * metrics.scaledDensity else 0f,
     )
     Image(
         provider = ImageProvider(bmp),

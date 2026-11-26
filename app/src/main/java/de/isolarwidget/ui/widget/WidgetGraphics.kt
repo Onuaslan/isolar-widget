@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
+import android.graphics.Typeface
 import androidx.core.graphics.ColorUtils
 
 /** Zeichnet Grafiken als Bitmap, weil Glance-Widgets keine Canvas-Zeichnung unterstützen. */
@@ -16,6 +17,7 @@ object WidgetGraphics {
     const val ORANGE = 0xFFF39C12.toInt()
     const val BLUE = 0xFF3D7BF7.toInt()
     private const val DASH = 0xFFD5D8DC.toInt()
+    private const val LABEL = 0xFF7A828C.toInt()
 
     /** Kreispfeil zum Aktualisieren (ca. 300° Bogen mit Pfeilspitze). */
     fun refresh(sizePx: Int, color: Int): Bitmap {
@@ -58,6 +60,8 @@ object WidgetGraphics {
         fill: Boolean, fullDay: Boolean = false, strokePx: Float = 4f,
         /** Anteil der Breite, den die Kurve nutzt (Rest: nur gestrichelte Linie). */
         curveFraction: Float = 1f,
+        /** Schriftgröße in px für Wattangaben (Spitzenwert, aktueller Wert); 0 = ohne Beschriftung. */
+        labelPx: Float = 0f,
     ): Bitmap {
         val w = widthPx.coerceAtLeast(10); val h = heightPx.coerceAtLeast(10)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -76,7 +80,9 @@ object WidgetGraphics {
         val last = if (fullDay) values.size - 1 else idx.last()
         val max = idx.maxOf { values[it]!! }.coerceAtLeast(1f)
         val span = (last - first).coerceAtLeast(1)
-        val top = strokePx * 2
+        val labels = labelPx > 0f
+        // Platz oben für die Beschriftung des Spitzenwerts freihalten
+        val top = if (labels) labelPx * 1.25f + strokePx else strokePx * 2
         val pts = idx.map { i ->
             val x = (i - first).toFloat() / span * (w * curveFraction - strokePx * 2) + strokePx
             val y = baseY - (values[i]!!.coerceAtLeast(0f) / max) * (baseY - top)
@@ -105,7 +111,66 @@ object WidgetGraphics {
             style = Paint.Style.STROKE; this.color = color; strokeWidth = strokePx
             strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         })
+        if (labels) drawLabels(c, values, idx, pts, w, h, color, strokePx, labelPx)
         return bmp
+    }
+
+    /**
+     * Wattangaben wie in der iSolarCloud-App: Spitzenwert grau über dem höchsten Punkt,
+     * aktueller (letzter) Wert fett in Kurvenfarbe rechts neben einem Punkt am Kurvenende.
+     * Überschneiden sich beide, bleibt nur der aktuelle Wert.
+     */
+    private fun drawLabels(
+        c: Canvas, values: List<Float?>, idx: List<Int>, pts: List<Pair<Float, Float>>,
+        w: Int, h: Int, color: Int, strokePx: Float, labelPx: Float,
+    ) {
+        val pad = strokePx
+        val nowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color; textSize = labelPx; typeface = Typeface.DEFAULT_BOLD
+        }
+        val peakPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = LABEL; textSize = labelPx
+        }
+        val fm = nowPaint.fontMetrics
+
+        // Punkt am Kurvenende
+        val (ex, ey) = pts.last()
+        c.drawCircle(ex, ey, strokePx * 1.4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color })
+        c.drawCircle(ex, ey, strokePx * 0.6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = 0xFFFFFFFF.toInt() })
+
+        // Aktueller Wert: rechts vom Punkt, sonst (zu wenig Platz) darüber
+        val nowText = watt(values[idx.last()]!!)
+        val nowW = nowPaint.measureText(nowText)
+        val textH = fm.descent - fm.ascent
+        var nx = ex + strokePx * 2.5f
+        var nyTop = ey - textH / 2
+        if (nx + nowW > w - pad) {
+            nx = (ex - nowW / 2).coerceIn(pad, w - pad - nowW)
+            nyTop = ey - strokePx * 2 - textH
+        }
+        nyTop = nyTop.coerceIn(0f, h - textH)
+        // Weißer Hintergrund, damit die gestrichelte Linie die Zahl nicht kreuzt
+        val nowBox = RectF(nx - strokePx * 0.5f, nyTop, nx + nowW + strokePx * 0.5f, nyTop + textH)
+        c.drawRect(nowBox, Paint().apply { this.color = 0xFFFFFFFF.toInt() })
+        c.drawText(nowText, nx, nyTop - fm.ascent, nowPaint)
+
+        // Spitzenwert: zentriert über dem höchsten Punkt (nicht, wenn er der aktuelle ist)
+        val peakK = idx.indices.maxByOrNull { values[idx[it]]!! } ?: return
+        if (peakK == idx.size - 1 || values[idx[peakK]]!! <= 0f) return
+        val peakText = watt(values[idx[peakK]]!!)
+        val peakW = peakPaint.measureText(peakText)
+        val (px, py) = pts[peakK]
+        val tx = (px - peakW / 2).coerceIn(pad, w - pad - peakW)
+        val tyTop = (py - strokePx - textH).coerceAtLeast(0f)
+        val peakBox = RectF(tx, tyTop, tx + peakW, tyTop + textH)
+        if (RectF.intersects(peakBox, nowBox)) return
+        c.drawText(peakText, tx, tyTop - fm.ascent, peakPaint)
+    }
+
+    /** "850 W" bzw. "3,2 kW" – kurz genug fürs Widget. */
+    fun watt(w: Float): String = when {
+        w >= 1000f -> String.format(java.util.Locale.GERMANY, "%.1f kW", w / 1000f)
+        else -> String.format(java.util.Locale.GERMANY, "%.0f W", w.coerceAtLeast(0f))
     }
 
     /** Batterie-Symbol mit Füllstand: grün ≥ 30 %, orange ≥ 15 %, sonst rot; grau ohne Wert. */

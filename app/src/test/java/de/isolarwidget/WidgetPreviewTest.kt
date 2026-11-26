@@ -33,5 +33,10 @@ class WidgetPreviewTest {
         save("refresh.png", WidgetGraphics.refresh(96, 0xFF8E9399.toInt()))
         save("spark_pv_left.png", WidgetGraphics.sparkline(pv, 450, 100, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f))
         save("spark_load_left.png", WidgetGraphics.sparkline(load, 450, 100, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f))
+        // Mit Wattangaben (Maßstab ~2,75 px/dp wie typisches Handy, Spalte ~100 dp × 36 dp)
+        save("spark_pv_watt.png", WidgetGraphics.sparkline(pv, 275, 99, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 20.6f))
+        save("spark_load_watt.png", WidgetGraphics.sparkline(load, 275, 99, WidgetGraphics.BLUE, fill = false, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 20.6f))
+        val pvNow = List(96) { i -> if (i in 30..50) (Math.sin((i - 30) / 36.0 * Math.PI) * 3000).toFloat() else null }
+        save("spark_pv_watt_mittag.png", WidgetGraphics.sparkline(pvNow, 275, 99, WidgetGraphics.ORANGE, fill = true, strokePx = 5.5f, curveFraction = 0.55f, labelPx = 20.6f))
     }
 }
