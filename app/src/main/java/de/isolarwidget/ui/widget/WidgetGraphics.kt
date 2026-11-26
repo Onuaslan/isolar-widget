@@ -66,7 +66,8 @@ object WidgetGraphics {
         val w = widthPx.coerceAtLeast(10); val h = heightPx.coerceAtLeast(10)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        val baseY = h - strokePx
+        // Mit Endpunkt Abstand nach unten, damit der Kreis bei 0 W nicht abgeschnitten wird
+        val baseY = h - if (labelPx > 0f) strokePx * 2.4f else strokePx
 
         val dash = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; this.color = DASH; strokeWidth = strokePx / 2

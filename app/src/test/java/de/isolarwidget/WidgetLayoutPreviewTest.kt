@@ -94,6 +94,7 @@ class WidgetLayoutPreviewTest {
 
     @Test fun wideFull() = render("widget_wide.png", WideWidget(), DpSize(250.dp, 162.dp), DpSize(345.dp, 187.dp))
     @Test fun wideMin() = render("widget_wide_min.png", WideWidget(), DpSize(250.dp, 162.dp), DpSize(300.dp, 162.dp))
-    @Test fun wideCompact() = render("widget_wide_compact.png", WideWidget(), DpSize(250.dp, 100.dp), DpSize(560.dp, 150.dp))
+    @Test fun wideOneRow() = render("widget_wide_4x1.png", WideWidget(), DpSize(250.dp, 40.dp), DpSize(345.dp, 72.dp))
+    @Test fun wideCompact() = render("widget_wide_compact.png", WideWidget(), DpSize(250.dp, 100.dp), DpSize(600.dp, 175.dp))
     @Test fun small() = render("widget_small.png", SmallWidget(), DpSize(110.dp, 172.dp), DpSize(170.dp, 187.dp))
 }

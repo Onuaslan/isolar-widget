@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -109,7 +110,7 @@ class SmallWidget : CacheWidget() {
 
 /** „Mein Zuhause“ 4×2: je eine Mini-Kurve über Tagesertrag (orange) und Tagesverbrauch (blau). */
 class WideWidget : CacheWidget() {
-    override val breakpoints = setOf(DpSize(250.dp, 60.dp), DpSize(250.dp, WIDE_NO_CURVE), DpSize(250.dp, WIDE_FULL))
+    override val breakpoints = setOf(DpSize(250.dp, 40.dp), DpSize(250.dp, WIDE_NO_CURVE), DpSize(250.dp, WIDE_FULL))
 
     @Composable
     override fun Content(s: PvSnapshot) {
@@ -117,17 +118,20 @@ class WideWidget : CacheWidget() {
         val c = h < WIDE_FULL
         val showCurve = h >= WIDE_NO_CURVE
         val colW = (realWidth() - 36.dp - 20.dp) / 2
-        val curveH = if (c) 18.dp else 36.dp
+        // Querformat (kompakt): Kurve nutzt die freie Höhe (bis 56 dp),
+        // ab 28 dp mit Wattangaben
+        val curveH = if (c) (realHeight() - 85.dp).coerceIn(18.dp, 56.dp) else 36.dp
+        val labels = curveH >= 28.dp
         val gap = if (c) 4.dp else 10.dp
         val valueSize = if (c) 18.sp else 22.sp
         val curve = s.todayCurve()
-        Card(c) {
+        Card(c, tight = !showCurve) {
             Header(s, c)
             Spacer(GlanceModifier.defaultWeight())
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = !c)
+                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = labels)
                         Spacer(GlanceModifier.height(gap))
                     }
                     ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
@@ -135,11 +139,13 @@ class WideWidget : CacheWidget() {
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = !c)
+                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = labels)
                         Spacer(GlanceModifier.height(gap))
                     }
-                    BottomRow(s, c) {
-                        ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    // Knopf nur neben dem Wert, damit „Tagesverbrauch“ die volle Breite hat
+                    val density = LocalContext.current.resources.displayMetrics.density
+                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c) {
+                        RefreshIcon(s, if (c) 16.dp else 18.dp, if (c) 24.dp else 28.dp, density)
                     }
                 }
             }
@@ -172,14 +178,25 @@ private fun realWidth(): Dp {
     return if (w > 0) maxOf(w.dp, stage) else stage
 }
 
+/** Echte Widgethöhe (Hochformat: max. Höhe, Querformat: min. Höhe), sonst die Stufe. */
+@Composable
+private fun realHeight(): Dp {
+    val o = LocalAppWidgetOptions.current
+    val landscape = LocalContext.current.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val h = o.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+    val stage = LocalSize.current.height
+    return if (h > 0) maxOf(h.dp, stage) else stage
+}
+
 private fun PvSnapshot.todayCurve(): DayCurve =
     if (curve.date == LocalDate.now().toString()) curve else DayCurve.EMPTY
 
 @Composable
-private fun Card(compact: Boolean, content: @Composable ColumnScope.() -> Unit) {
+private fun Card(compact: Boolean, tight: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = GlanceModifier.fillMaxSize().background(BG).cornerRadius(22.dp)
-            .padding(horizontal = 18.dp, vertical = if (compact) 10.dp else 16.dp)
+            // tight (4×1): weniger Rand oben/unten, sonst wird die Unterkante der Zahlen abgeschnitten
+            .padding(horizontal = 18.dp, vertical = if (tight) 4.dp else if (compact) 10.dp else 16.dp)
             .clickable(actionRunCallback<OpenIsolarAction>()),
         content = content,
     )
@@ -231,10 +248,18 @@ private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -
     val touch = if (compact) 24.dp else 28.dp
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         Box(GlanceModifier.defaultWeight()) { content() }
+        RefreshIcon(s, icon, touch, density)
+    }
+}
+
+@Composable
+private fun RefreshIcon(s: PvSnapshot, icon: Dp, touch: Dp, density: Float) {
         Box(
             modifier = GlanceModifier.size(touch).cornerRadius(touch / 2)
                 .clickable(actionRunCallback<RefreshAction>()),
-            contentAlignment = Alignment.BottomEnd,
+            // Mittig statt unten bündig: Ist das Widget minimal zu niedrig (z. B. aufgeklapptes
+            // Foldable), schneidet die Karte die unterste Kante ab – dort liegt dann nur Leerraum.
+            contentAlignment = Alignment.Center,
         ) {
             Image(
                 provider = ImageProvider(
@@ -247,17 +272,24 @@ private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -
                 modifier = GlanceModifier.size(icon),
             )
         }
-    }
 }
 
 @Composable
-private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit, compact: Boolean = false) {
-    Column {
+private fun ValueBlock(
+    label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit, compact: Boolean = false,
+    /** Optional rechts in der Wertzeile (Aktualisieren-Knopf); die Beschriftung darüber behält die volle Breite. */
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Column(if (trailing != null) GlanceModifier.fillMaxWidth() else GlanceModifier) {
         Text(label, style = TextStyle(color = LABEL, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1)
         if (!compact) Spacer(GlanceModifier.height(2.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(if (trailing != null) GlanceModifier.fillMaxWidth() else GlanceModifier, verticalAlignment = Alignment.Bottom) {
             Text(Format.number(kwh), style = TextStyle(color = VALUE, fontSize = size, fontWeight = FontWeight.Bold), maxLines = 1)
             Text(" kWh", style = TextStyle(color = VALUE, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = if (compact) 2.dp else 3.dp))
+            if (trailing != null) {
+                Spacer(GlanceModifier.defaultWeight())
+                trailing()
+            }
         }
     }
 }
