@@ -128,7 +128,7 @@ class WideWidget : CacheWidget() {
         val real = realSize()
         val colW = (real.width - 36.dp - COL_GAP) / 2
         // Geschätzte Kurvenhöhe nur für die Bitmap-Auflösung; die echte Höhe ergibt sich aus dem Gewicht
-        val curveH = if (c) 22.dp else (real.height - 150.dp).coerceIn(28.dp, 90.dp)
+        val curveH = if (c) (real.height - 88.dp).coerceIn(16.dp, 60.dp) else (real.height - 150.dp).coerceIn(28.dp, 90.dp)
         val valueSize = if (c) 18.sp else 22.sp
         val curve = s.todayCurve()
         Card(c) {
