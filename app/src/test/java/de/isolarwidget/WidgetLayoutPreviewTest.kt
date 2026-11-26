@@ -61,7 +61,17 @@ class WidgetLayoutPreviewTest {
         }
     }
 
-    private fun render(name: String, widget: CacheWidget, stage: DpSize, real: DpSize) = runBlocking {
+    /** Fehler landen als Text neben den Bildern, damit man sie im Branch "previews" sieht. */
+    private fun render(name: String, widget: CacheWidget, stage: DpSize, real: DpSize) {
+        try {
+            doRender(name, widget, stage, real)
+        } catch (t: Throwable) {
+            File(out, name.replace(".png", "_fehler.txt")).writeText(t.stackTraceToString())
+            throw t
+        }
+    }
+
+    private fun doRender(name: String, widget: CacheWidget, stage: DpSize, real: DpSize) = runBlocking {
         val ctx = RuntimeEnvironment.getApplication()
         val opts = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, real.width.value.toInt())
