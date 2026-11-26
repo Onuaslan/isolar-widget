@@ -142,8 +142,10 @@ class WideWidget : CacheWidget() {
                         Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = labels)
                         Spacer(GlanceModifier.height(gap))
                     }
-                    BottomRow(s, c, overlay = true) {
-                        ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
+                    // Knopf nur neben dem Wert, damit „Tagesverbrauch“ die volle Breite hat
+                    val density = LocalContext.current.resources.displayMetrics.density
+                    ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c) {
+                        RefreshIcon(s, if (c) 16.dp else 18.dp, if (c) 24.dp else 28.dp, density)
                     }
                 }
             }
@@ -239,22 +241,13 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
  * Aktualisierung wird das Symbol heller.
  */
 @Composable
-private fun BottomRow(s: PvSnapshot, compact: Boolean, overlay: Boolean = false, content: @Composable () -> Unit) {
+private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -> Unit) {
     val density = LocalContext.current.resources.displayMetrics.density
     val icon = if (compact) 16.dp else 18.dp
     val touch = if (compact) 24.dp else 28.dp
-    // overlay: Knopf liegt über der rechten unteren Ecke, damit die Beschriftung darüber
-    // die volle Breite behält („Tagesverbrauch“ wird sonst abgeschnitten)
-    if (overlay) {
-        Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.BottomEnd) {
-            Box(GlanceModifier.fillMaxWidth()) { content() }
-            RefreshIcon(s, icon, touch, density)
-        }
-    } else {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            Box(GlanceModifier.defaultWeight()) { content() }
-            RefreshIcon(s, icon, touch, density)
-        }
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Box(GlanceModifier.defaultWeight()) { content() }
+        RefreshIcon(s, icon, touch, density)
     }
 }
 
@@ -279,13 +272,21 @@ private fun RefreshIcon(s: PvSnapshot, icon: Dp, touch: Dp, density: Float) {
 }
 
 @Composable
-private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit, compact: Boolean = false) {
-    Column {
+private fun ValueBlock(
+    label: String, kwh: Double?, size: androidx.compose.ui.unit.TextUnit, compact: Boolean = false,
+    /** Optional rechts in der Wertzeile (Aktualisieren-Knopf); die Beschriftung darüber behält die volle Breite. */
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Column(if (trailing != null) GlanceModifier.fillMaxWidth() else GlanceModifier) {
         Text(label, style = TextStyle(color = LABEL, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1)
         if (!compact) Spacer(GlanceModifier.height(2.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(if (trailing != null) GlanceModifier.fillMaxWidth() else GlanceModifier, verticalAlignment = Alignment.Bottom) {
             Text(Format.number(kwh), style = TextStyle(color = VALUE, fontSize = size, fontWeight = FontWeight.Bold), maxLines = 1)
             Text(" kWh", style = TextStyle(color = VALUE, fontSize = if (compact) 11.sp else 13.sp), maxLines = 1, modifier = GlanceModifier.padding(bottom = if (compact) 2.dp else 3.dp))
+            if (trailing != null) {
+                Spacer(GlanceModifier.defaultWeight())
+                trailing()
+            }
         }
     }
 }
