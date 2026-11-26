@@ -124,7 +124,7 @@ class WideWidget : CacheWidget() {
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true)
+                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = !c)
                         Spacer(GlanceModifier.height(gap))
                     }
                     ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
@@ -132,7 +132,7 @@ class WideWidget : CacheWidget() {
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false)
+                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = !c)
                         Spacer(GlanceModifier.height(gap))
                     }
                     BottomRow(s, c) {
@@ -246,13 +246,18 @@ private fun ValueBlock(label: String, kwh: Double?, size: androidx.compose.ui.un
     }
 }
 
-/** Kurve im linken Teil, gestrichelte Grundlinie über die ganze Spalte – wie Vorlage. */
+/**
+ * Kurve im linken Teil, gestrichelte Grundlinie über die ganze Spalte – wie Vorlage.
+ * Mit [labels] stehen Spitzenwert und aktueller Wert in W/kW an der Kurve (wie iSolarCloud-App).
+ */
 @Composable
-private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill: Boolean) {
-    val density = LocalContext.current.resources.displayMetrics.density
+private fun Curve(values: List<Float?>, width: Dp, height: Dp, color: Int, fill: Boolean, labels: Boolean = false) {
+    val metrics = LocalContext.current.resources.displayMetrics
+    val density = metrics.density
     val bmp = WidgetGraphics.sparkline(
         values, (width.value * density).toInt(), (height.value * density).toInt(), color, fill,
         strokePx = 2f * density, curveFraction = 0.55f,
+        labelPx = if (labels) 10f * metrics.scaledDensity else 0f,
     )
     Image(
         provider = ImageProvider(bmp),
