@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -117,7 +118,10 @@ class WideWidget : CacheWidget() {
         val c = h < WIDE_FULL
         val showCurve = h >= WIDE_NO_CURVE
         val colW = (realWidth() - 36.dp - 20.dp) / 2
-        val curveH = if (c) 18.dp else 36.dp
+        // Querformat (kompakt): Kurve nutzt die freie Höhe (bis 56 dp),
+        // ab 28 dp mit Wattangaben
+        val curveH = if (c) (realHeight() - 85.dp).coerceIn(18.dp, 56.dp) else 36.dp
+        val labels = curveH >= 28.dp
         val gap = if (c) 4.dp else 10.dp
         val valueSize = if (c) 18.sp else 22.sp
         val curve = s.todayCurve()
@@ -127,7 +131,7 @@ class WideWidget : CacheWidget() {
             Row(GlanceModifier.fillMaxWidth()) {
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = !c)
+                        Curve(curve.pv, colW, curveH, WidgetGraphics.ORANGE, fill = true, labels = labels)
                         Spacer(GlanceModifier.height(gap))
                     }
                     ValueBlock("Tagesertrag", s.values?.dailyYieldKwh, valueSize, c)
@@ -135,10 +139,10 @@ class WideWidget : CacheWidget() {
                 Spacer(GlanceModifier.width(20.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     if (showCurve) {
-                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = !c)
+                        Curve(curve.load, colW, curveH, WidgetGraphics.BLUE, fill = false, labels = labels)
                         Spacer(GlanceModifier.height(gap))
                     }
-                    BottomRow(s, c) {
+                    BottomRow(s, c, overlay = true) {
                         ValueBlock("Tagesverbrauch", s.values?.consumptionTodayKwh, valueSize, c)
                     }
                 }
@@ -170,6 +174,16 @@ private fun realWidth(): Dp {
     val w = o.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
     val stage = LocalSize.current.width
     return if (w > 0) maxOf(w.dp, stage) else stage
+}
+
+/** Echte Widgethöhe (Hochformat: max. Höhe, Querformat: min. Höhe), sonst die Stufe. */
+@Composable
+private fun realHeight(): Dp {
+    val o = LocalAppWidgetOptions.current
+    val landscape = LocalContext.current.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val h = o.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+    val stage = LocalSize.current.height
+    return if (h > 0) maxOf(h.dp, stage) else stage
 }
 
 private fun PvSnapshot.todayCurve(): DayCurve =
@@ -225,12 +239,27 @@ private fun Header(s: PvSnapshot, compact: Boolean) {
  * Aktualisierung wird das Symbol heller.
  */
 @Composable
-private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -> Unit) {
+private fun BottomRow(s: PvSnapshot, compact: Boolean, overlay: Boolean = false, content: @Composable () -> Unit) {
     val density = LocalContext.current.resources.displayMetrics.density
     val icon = if (compact) 16.dp else 18.dp
     val touch = if (compact) 24.dp else 28.dp
-    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-        Box(GlanceModifier.defaultWeight()) { content() }
+    // overlay: Knopf liegt über der rechten unteren Ecke, damit die Beschriftung darüber
+    // die volle Breite behält („Tagesverbrauch“ wird sonst abgeschnitten)
+    if (overlay) {
+        Box(GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.BottomEnd) {
+            Box(GlanceModifier.fillMaxWidth()) { content() }
+            RefreshIcon(s, icon, touch, density)
+        }
+    } else {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Box(GlanceModifier.defaultWeight()) { content() }
+            RefreshIcon(s, icon, touch, density)
+        }
+    }
+}
+
+@Composable
+private fun RefreshIcon(s: PvSnapshot, icon: Dp, touch: Dp, density: Float) {
         Box(
             modifier = GlanceModifier.size(touch).cornerRadius(touch / 2)
                 .clickable(actionRunCallback<RefreshAction>()),
@@ -247,7 +276,6 @@ private fun BottomRow(s: PvSnapshot, compact: Boolean, content: @Composable () -
                 modifier = GlanceModifier.size(icon),
             )
         }
-    }
 }
 
 @Composable
