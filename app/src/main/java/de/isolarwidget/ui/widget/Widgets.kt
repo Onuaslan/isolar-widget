@@ -125,7 +125,7 @@ class WideWidget : CacheWidget() {
         val gap = if (c) 4.dp else 10.dp
         val valueSize = if (c) 18.sp else 22.sp
         val curve = s.todayCurve()
-        Card(c) {
+        Card(c, tight = !showCurve) {
             Header(s, c)
             Spacer(GlanceModifier.defaultWeight())
             Row(GlanceModifier.fillMaxWidth()) {
@@ -192,10 +192,11 @@ private fun PvSnapshot.todayCurve(): DayCurve =
     if (curve.date == LocalDate.now().toString()) curve else DayCurve.EMPTY
 
 @Composable
-private fun Card(compact: Boolean, content: @Composable ColumnScope.() -> Unit) {
+private fun Card(compact: Boolean, tight: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = GlanceModifier.fillMaxSize().background(BG).cornerRadius(22.dp)
-            .padding(horizontal = 18.dp, vertical = if (compact) 10.dp else 16.dp)
+            // tight (4×1): weniger Rand oben/unten, sonst wird die Unterkante der Zahlen abgeschnitten
+            .padding(horizontal = 18.dp, vertical = if (tight) 4.dp else if (compact) 10.dp else 16.dp)
             .clickable(actionRunCallback<OpenIsolarAction>()),
         content = content,
     )
